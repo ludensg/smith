@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anthology of American Folk Music</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bone:#EEE4C8; --tar:#0A0805; --tar2:#130F09;
+  --blood:#5C1608; --blood2:#9B2A14;
+  --amber:#B8780A; --amber2:#E09A18;
+  --ash:#7A6A50; --parch:#E0D4AC;
+  --nav-h:48px;
+
+  /* Classical element palettes — aged pigment, desaturated */
+  --air:   #0D2D12; --air2:   #5A9E68;  /* Vol I  Ballads      — Air/Green  */
+  --fire:  #4A0E06; --fire2:  #B84830;  /* Vol II Social Music — Fire/Red   */
+  --water: #08192A; --water2: #3880A8;  /* Vol III Songs       — Water/Blue */
+  --earth: #2A1A04; --earth2: #B8901A;  /* Vol IV Labor Songs  — Earth/Yell */
+}
+html{height:100%;-webkit-text-size-adjust:100%;}
+body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospace;overflow-x:hidden;min-height:100%;filter:contrast(1.12) brightness(1.06);}
+
+/* ── grain + paper texture layers ── */
+/* Film grain overlay.
+   The element itself NEVER moves — position:fixed, inset:0.
+   Only background-position animates, cycling through different
+   parts of the tiled noise pattern with steps() for instant jumps.
+   multiply blend darkens rather than brightening. */
+#grain{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:997;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)' opacity='0.4'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+  mix-blend-mode:soft-light;
+  opacity:.6;
+  animation: grain-shift 0.5s steps(8) infinite;
+}
+@keyframes grain-shift{
+  0%  { background-position:   0px   0px; }
+  14% { background-position:  40px  30px; }
+  28% { background-position: -30px  60px; }
+  42% { background-position:  70px -20px; }
+  57% { background-position: -60px  50px; }
+  71% { background-position:  20px -70px; }
+  85% { background-position: -50px  10px; }
+  100%{ background-position:  60px  40px; }
+}
+
+
+
+/* Layer 3: vignette */
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:995;
+  background:radial-gradient(ellipse 90% 85% at 50% 50%,transparent 55%,rgba(4,2,0,.65) 100%);
+}
+
+/* CRT scanlines — 1px dark line every 3px, subtle */
+#scanlines{position:fixed;inset:0;pointer-events:none;z-index:994;
+  background-image:repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 3px
+  );
+  opacity:1;
+}
+
+/* ── nav ── */
+#nav{position:fixed;top:0;left:0;right:0;z-index:500;height:var(--nav-h);
+  display:flex;align-items:stretch;background:rgba(10,8,5,.97);
+  border-bottom:1px solid rgba(238,228,200,.08);}
+#nav-logo{display:flex;align-items:center;padding:0 1.25rem;
+  border-right:1px solid rgba(238,228,200,.08);
+  font-family:'UnifrakturMaguntia',cursive;font-size:1.3rem;
+  color:var(--amber2);white-space:nowrap;flex-shrink:0;}
+.nb{display:flex;align-items:center;padding:0 1rem;background:none;border:none;
+  border-right:1px solid rgba(238,228,200,.05);color:rgba(238,228,200,.3);
+  font-family:'Special Elite',cursive;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  cursor:pointer;transition:color .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.nb:hover{color:var(--bone);} .nb.on{color:var(--amber2);}
+
+/* ── views ── */
+.view{display:none;}
+.view.on{display:block;}
+
+/* ═══════════════════════════════════
+   MONOCHORD — mobile first, single col
+═══════════════════════════════════ */
+#v-mono.on{display:flex;flex-direction:column;padding-top:var(--nav-h);overflow:hidden;}
+
+/* ── Left bg panel ──
+   THE FIX: we do NOT use position:absolute on the canvas.
+   Instead the panel is a normal flow block, and the canvas
+   is drawn via CSS background-style layering — the WebGL
+   canvas is position:fixed but clipped by the panel's
+   overflow:hidden + a clip trick in JS is not needed;
+   actually the simplest reliable approach:
+   make the panel itself the WebGL surface by giving it
+   an explicit height and positioning the canvas to stretch it. */
+/* THE FIX: CSS grid overlap.
+   Canvas and content share cell [1/1].
+   Canvas stretches to fill via align/justify-self:stretch.
+   No position:absolute needed — the canvas has real layout dimensions. */
+#mono-bg-panel{
+  display:grid;
+  grid-template-rows:1fr;
+  min-height:calc(100vh - var(--nav-h));
+  overflow:hidden;
+}
+#mono-bg-panel > *{grid-column:1;grid-row:1;}
+
+#bg-canvas{
+  display:block;
+  width:100%;
+  /* height driven by grid row — will match panel height */
+  align-self:stretch;
+  justify-self:stretch;
+  pointer-events:none;
+  z-index:0;
+}
+
+#mono-scrim{
+  pointer-events:none;z-index:1;
+  background:linear-gradient(
+    160deg,
+    rgba(10,8,5,.72) 0%,
+    rgba(10,8,5,.22) 38%,
+    rgba(10,8,5,.32) 62%,
+    rgba(10,8,5,.68) 100%
+  );
+}
+
+/* Fludd celestial monochord — centered in the dead space of the left panel. */
+#fludd-overlay{
+  grid-column:1;grid-row:1;
+  z-index:2;
+  pointer-events:none;
+  width:100%;
+  height:100%;
+  position:relative;
+  overflow:hidden;
+}
+#fludd-img{
+  position:absolute;
+  top:0;
+  bottom:0;
+  height:100%;
+  width:auto;
+  left:50%;
+  transform:translateX(-30%);
+  display:block;
+  opacity:.6;
+  mix-blend-mode:color-dodge;
+  object-fit:contain;
+  object-position:center center;
+}
+/* Film grain scoped to the illustration so it blends with
+   the elemental background rather than sitting cleanly on top.
+   Two layers: fine fractal noise (overlay) + coarser turbulence
+   (multiply) mirror the global grain stack but at higher intensity
+   since the illustration is lighter than the dark background. */
+#fludd-overlay::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)' opacity='0.4'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+  mix-blend-mode:soft-light;
+  opacity:.4;
+  animation: grain-shift 0.5s steps(8) infinite;
+  animation-delay: -0.22s;
+}
+
+
+
+/* Mobile: no gap, fit entire first view without scrolling */
+@media(max-width:767px){
+  /* Nav is position:fixed — no flow space needed. Panel fills full viewport. */
+  #v-mono.on{padding-top:0;}
+  #mono-bg-panel{min-height:100vh;padding-top:0;}
+  /* Content starts below the nav via its own top padding */
+  #mono-content{padding-top:calc(var(--nav-h) + 1rem);}
+
+  #fludd-img{opacity:.35;}
+  #mono-content{z-index:4;padding:1rem 1rem 1.5rem;}
+
+  /* Scale down masthead to leave room for all 4 vol titles */
+  .mh-h1{
+    font-size:clamp(1.6rem,9vw,2.6rem);
+    text-shadow:0 2px 20px rgba(0,0,0,1),0 0 50px rgba(0,0,0,.9);
+    margin-bottom:.1em;
+  }
+  .mh-sub{font-size:.72rem;margin-top:.4rem;line-height:1.55;max-width:100%;}
+  .mh-eye{font-size:.54rem;margin-bottom:.3rem;}
+  #mono-content::before{display:none;}
+  #spine-wrap{margin-top:.6rem;}
+  .vs{padding:.4rem .6rem 0 2.2rem;}
+  .vs-title{font-size:clamp(1.2rem,6.5vw,1.8rem);}
+  .vs-label{font-size:.52rem;letter-spacing:.18em;}
+  .vs-knot{top:.4rem;width:10px;height:10px;}
+  .vs-header{padding-bottom:.4rem;gap:.4rem;}
+}
+#mono-content{position:relative;z-index:2;padding:3rem 1.5rem 3.5rem;}
+
+.mh-eye{font-family:'Special Elite',cursive;font-size:.7rem;letter-spacing:.26em;text-transform:uppercase;color:var(--amber);margin-bottom:.9rem;text-shadow:0 1px 6px rgba(0,0,0,.9);}
+/* Arcane separator below eyebrow */
+.mh-eye::after{
+  content:'— ✦ ✦ ✦ —';
+  display:block;font-size:.56rem;letter-spacing:.2em;
+  color:rgba(184,120,10,.25);margin-top:.6rem;margin-bottom:.4rem;
+  text-align:left;
+}
+/* Faint decorative rule above the masthead */
+#mono-content::before{
+  content:'· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·';
+  display:block;font-size:.4rem;letter-spacing:.3em;
+  color:rgba(184,120,10,.18);margin-bottom:2rem;
+  word-break:break-all;line-height:1.4;
+}
+.mh-h1{font-family:'UnifrakturMaguntia',cursive;font-size:clamp(3rem,12vw,5.5rem);line-height:.86;color:var(--bone);margin-bottom:.2em;text-shadow:0 2px 18px rgba(0,0,0,.9),0 0 40px rgba(0,0,0,.7);}
+.mh-sub{
+  font-family:'Special Elite',cursive;
+  font-style:normal;
+  font-size:.88rem;
+  color:rgba(238,228,200,.78);
+  line-height:1.75;
+  max-width:360px;
+  margin-top:.9rem;
+  letter-spacing:.02em;
+  text-shadow:0 1px 8px rgba(0,0,0,.95);
+}
+
+#spine-wrap{position:relative;padding-left:1.5rem;margin-top:2rem;}
+#spine{position:absolute;left:calc(1.5rem + 13px);top:0;bottom:0;width:1px;
+  background:linear-gradient(to bottom,transparent,rgba(184,120,10,.55) 6%,rgba(184,120,10,.55) 94%,transparent);
+  box-shadow:0 0 8px 1px rgba(184,120,10,.18);z-index:1;}
+
+.vs{position:relative;padding:1.6rem 1rem 0 3.2rem;z-index:2;}
+.vs::before{content:'';position:absolute;left:1.5rem;top:0;bottom:0;width:2px;opacity:0;transition:opacity .4s;}
+.vs.open::before{opacity:1;}
+.vs-I::before{background:var(--air2);}
+.vs-II::before{background:var(--fire2);}
+.vs-III::before{background:var(--water2);}
+.vs-IV::before{background:var(--earth2);}
+
+.vs-knot{position:absolute;left:calc(1.5rem + 8px);top:1.6rem;width:12px;height:12px;border:1px solid;transform:rotate(45deg);z-index:3;}
+.vs-I .vs-knot{border-color:var(--air2);background:var(--air);}
+.vs-II .vs-knot{border-color:var(--fire2); background:var(--fire);}
+.vs-III .vs-knot{border-color:var(--water2);background:var(--water);}
+.vs-IV .vs-knot{border-color:var(--earth2);background:var(--earth);}
+.vs-knot{transition:background .3s,box-shadow .3s;}
+.vs-I.open  .vs-knot{background:var(--air2);  box-shadow:0 0 8px var(--air2);}
+.vs-II.open .vs-knot{background:var(--fire2); box-shadow:0 0 8px var(--fire2);}
+.vs-III.open .vs-knot{background:var(--water2);box-shadow:0 0 8px var(--water2);}
+.vs-IV.open .vs-knot{background:var(--earth2);box-shadow:0 0 8px var(--earth2);}
+
+.vs-header{display:flex;align-items:baseline;gap:.7rem;cursor:pointer;user-select:none;padding-bottom:.9rem;-webkit-tap-highlight-color:transparent;}
+.vs-label{font-family:'Special Elite',cursive;font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ash);flex-shrink:0;padding-top:.1rem;}
+/* Arcane glyph before each open volume header */
+.vs.open .vs-header .vs-label::before{content:'✦ ';opacity:.4;font-size:.45rem;}
+.vs-title{
+  font-family:'UnifrakturMaguntia',cursive;font-size:2.1rem;line-height:1;
+  text-shadow:0 2px 10px rgba(0,0,0,.95);
+  transition:text-shadow .3s, filter .3s;
+}
+.vs-I .vs-title{color:var(--air2);}
+.vs-II .vs-title{color:var(--fire2);}
+.vs-III .vs-title{color:var(--water2);}
+.vs-IV .vs-title{color:var(--earth2);}
+
+/* Hover: bright glow in the volume's own colour */
+.vs-I  .vs-header:hover .vs-title{text-shadow:0 0 18px var(--air2),  0 0 40px var(--air2),  0 2px 10px rgba(0,0,0,.9);}
+.vs-II .vs-header:hover .vs-title{text-shadow:0 0 18px var(--fire2), 0 0 40px var(--fire2), 0 2px 10px rgba(0,0,0,.9);}
+.vs-III .vs-header:hover .vs-title{text-shadow:0 0 18px var(--water2),0 0 40px var(--water2),0 2px 10px rgba(0,0,0,.9);}
+.vs-IV .vs-header:hover .vs-title{text-shadow:0 0 18px var(--earth2),0 0 40px var(--earth2),0 2px 10px rgba(0,0,0,.9);}
+
+/* Open/selected: steady softer inner glow, like a lit lamp */
+.vs-I.open  .vs-title{text-shadow:0 0 12px var(--air2),  0 0 28px rgba(58,196,96,.4),  0 2px 10px rgba(0,0,0,.9);}
+.vs-II.open .vs-title{text-shadow:0 0 12px var(--fire2), 0 0 28px rgba(184,72,48,.4),  0 2px 10px rgba(0,0,0,.9);}
+.vs-III.open .vs-title{text-shadow:0 0 12px var(--water2),0 0 28px rgba(56,128,168,.4),0 2px 10px rgba(0,0,0,.9);}
+.vs-IV.open .vs-title{text-shadow:0 0 12px var(--earth2),0 0 28px rgba(184,144,26,.4), 0 2px 10px rgba(0,0,0,.9);}
+.vs-chevron{margin-left:auto;font-family:'Courier Prime',monospace;font-size:1rem;color:var(--ash);transition:transform .35s;flex-shrink:0;line-height:1;}
+.vs.open .vs-chevron{transform:rotate(90deg);}
+.vs-tracks{overflow:hidden;max-height:0;transition:max-height .48s cubic-bezier(.4,0,.2,1);}
+.vs.open .vs-tracks{max-height:3000px;}
+
+.tn{display:flex;align-items:center;gap:.6rem;padding:.38rem 0;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;}
+.tn::before{content:'';position:absolute;left:-3.2rem;top:50%;width:3.2rem;height:1px;
+  background:rgba(184,120,10,.1);transform:translateY(-50%);transition:background .2s;}
+.tn:hover::before,.tn.sel::before{background:rgba(184,120,10,.45);}
+.tn-n{font-family:'Courier Prime',monospace;font-size:.72rem;color:rgba(238,228,200,.2);min-width:26px;flex-shrink:0;}
+.tn-t{font-family:'IM Fell English',serif;font-size:1.08rem;color:rgba(238,228,200,.58);transition:color .2s;line-height:1.3;text-shadow:0 1px 6px rgba(0,0,0,.9);}
+.tn:hover .tn-t,.tn.sel .tn-t{color:var(--bone);}
+.tn-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;margin-left:auto;opacity:0;transition:opacity .2s;}
+.vs-I .tn-dot{background:var(--air2);}
+.vs-II .tn-dot{background:var(--fire2);}
+.vs-III .tn-dot{background:var(--water2);}
+.vs-IV .tn-dot{background:var(--earth2);}
+.tn:hover .tn-dot,.tn.sel .tn-dot{opacity:1;}
+
+/* ── divider (desktop only) ── */
+#mono-div{display:none;}
+
+/* ── card panel ── */
+#card-panel{
+  background:var(--tar2);
+  position:relative;
+  overflow:hidden;
+  /* mobile: hidden until track selected */
+  display:none;
+}
+#card-panel.active{display:block;}
+
+#right-noise-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.28;}
+
+#mono-empty{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  min-height:240px;z-index:1;position:relative;
+}
+.me-g{font-family:'UnifrakturMaguntia',cursive;font-size:7rem;color:rgba(184,120,10,.18);line-height:1;margin-bottom:.8rem;}
+.me-h{font-family:'Special Elite',cursive;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,228,200,.55);}
+
+#mono-card{display:none;flex-direction:column;z-index:1;position:relative;animation:c-in .3s ease forwards;}
+#mono-card.show{display:flex;}
+@keyframes c-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+/* ── image slots (top and bottom) ── */
+.card-img-slot{width:100%;flex-shrink:0;background:rgba(12,8,2,.96);display:none;}
+.card-img-slot.has-images{display:block;}
+.cis-row{display:flex;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;}
+.cis-row::-webkit-scrollbar{display:none;}
+.cis-frame{position:relative;flex:0 0 auto;height:165px;overflow:hidden;background:rgba(10,6,1,1);}
+.cis-frame img{width:100%;height:100%;object-fit:cover;display:block;
+  filter:sepia(.6) contrast(1.08) brightness(.84);opacity:.9;transition:opacity .35s;}
+.cis-frame img.loading{opacity:0;}
+.cis-credit{position:absolute;bottom:.3rem;right:.5rem;font-family:'Courier Prime',monospace;
+  font-size:.46rem;color:rgba(238,228,200,.22);letter-spacing:.04em;max-width:85%;text-align:right;pointer-events:none;}
+.cis-badge{position:absolute;top:.4rem;left:.5rem;font-family:'Special Elite',cursive;
+  font-size:.44rem;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(238,228,200,.28);background:rgba(10,6,1,.55);padding:.12rem .38rem;}
+
+.card-band{background:rgba(12,7,2,1);padding:.5rem 1.1rem;flex-shrink:0;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid rgba(238,228,200,.05);
+  border-top:1px solid rgba(184,120,10,.2);}
+.cb-num{font-family:'Special Elite',cursive;font-size:.68rem;letter-spacing:.16em;color:var(--amber2);}
+.cb-vol{font-family:'Special Elite',cursive;font-size:.6rem;letter-spacing:.08em;color:rgba(238,228,200,.45);}
+#mono-card[data-vol="I"]   .card-band{border-left:3px solid var(--air2);}
+#mono-card[data-vol="II"]  .card-band{border-left:3px solid var(--fire2);}
+#mono-card[data-vol="III"] .card-band{border-left:3px solid var(--water2);}
+#mono-card[data-vol="IV"]  .card-band{border-left:3px solid var(--earth2);}
+
+/* ── full Smith liner-note card body ── */
+.card-body{
+  background:var(--parch);padding:0;flex-shrink:0;
+  position:relative;overflow:hidden;
+  background-image:repeating-linear-gradient(
+    to bottom,transparent 0px,transparent 24px,
+    rgba(30,20,5,.07) 24px,rgba(30,20,5,.07) 25px);
+}
+/* foxing */
+.card-body::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    radial-gradient(ellipse 9px 6px at 15% 20%,rgba(100,60,20,.13) 0%,transparent 100%),
+    radial-gradient(ellipse 5px 9px at 74% 55%,rgba(100,60,20,.09) 0%,transparent 100%),
+    radial-gradient(ellipse 14px 4px at 55% 83%,rgba(100,60,20,.07) 0%,transparent 100%),
+    radial-gradient(ellipse 4px 8px at 88% 13%,rgba(100,60,20,.11) 0%,transparent 100%),
+    radial-gradient(ellipse 7px 5px at 37% 67%,rgba(100,60,20,.08) 0%,transparent 100%);}
+
+/* ─ header row: big number + title/artist block ─ */
+.cb-header-row{
+  display:flex;align-items:stretch;
+  border-bottom:1px solid rgba(20,12,4,.12);
+}
+.cb-big-num{
+  font-family:'UnifrakturMaguntia',cursive;
+  font-size:4.8rem;line-height:1;
+  color:var(--blood2);
+  padding:.6rem .8rem .4rem;
+  border-right:2px solid rgba(20,12,4,.1);
+  flex-shrink:0;min-width:3.2rem;
+  display:flex;align-items:center;justify-content:center;
+}
+.cb-title-block{
+  padding:.75rem 1rem .65rem;flex:1;min-width:0;
+}
+.cb-title{
+  font-family:'IM Fell English',serif;
+  font-size:1.45rem;color:rgba(20,12,4,.95);
+  line-height:1.2;margin-bottom:.1rem;
+}
+.cb-label-info{
+  font-family:'Special Elite',cursive;
+  font-size:.72rem;letter-spacing:.04em;
+  color:rgba(20,12,4,.62);margin-bottom:.18rem;
+  font-style:italic;
+}
+.cb-artist{
+  font-family:'Special Elite',cursive;
+  font-size:.85rem;letter-spacing:.07em;
+  color:rgba(20,12,4,.75);margin-bottom:.1rem;
+}
+.cb-instrumentation{
+  font-family:'Courier Prime',monospace;
+  font-size:.72rem;color:rgba(20,12,4,.58);
+  letter-spacing:.04em;
+}
+
+/* ─ metadata strip ─ */
+.cb-meta-strip{
+  display:flex;gap:0;
+  border-bottom:1px solid rgba(20,12,4,.1);
+  background:rgba(20,12,4,.04);
+}
+.cb-meta-cell{
+  flex:1;padding:.48rem .9rem;
+  border-right:1px solid rgba(20,12,4,.08);
+  display:flex;flex-direction:column;gap:.1rem;
+}
+.cb-meta-cell:last-child{border-right:none;}
+.cb-meta-key{
+  font-family:'Special Elite',cursive;
+  font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--blood2);
+}
+.cb-meta-val{
+  font-family:'Courier Prime',monospace;
+  font-size:.78rem;color:rgba(20,12,4,.78);
+  letter-spacing:.03em;
+}
+
+/* ─ synopsis / headline ─ */
+.cb-section{padding:.8rem 1.1rem;}
+.cb-section+.cb-section{border-top:1px solid rgba(20,12,4,.08);}
+.cb-section-label{
+  font-family:'Special Elite',cursive;
+  font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--blood2);margin-bottom:.4rem;
+}
+.cb-hl{
+  font-family:'Special Elite',cursive;
+  font-size:.92rem;letter-spacing:.04em;line-height:1.65;
+  color:rgba(80,20,8,.92);text-transform:uppercase;
+}
+
+/* general notes */
+.cb-notes{
+  font-family:'Courier Prime',monospace;
+  font-style:normal;
+  font-size:.88rem;
+  color:rgba(20,12,4,.88);
+  line-height:1.78;
+  letter-spacing:.01em;
+}
+
+/* discography + bibliography lists */
+.cb-list{
+  list-style:none;padding:0;margin:0;
+  display:flex;flex-direction:column;gap:.28rem;
+}
+.cb-list li{
+  font-family:'Courier Prime',monospace;
+  font-size:.8rem;color:rgba(20,12,4,.75);
+  line-height:1.5;
+  padding-left:.9rem;position:relative;
+}
+.cb-list li::before{
+  content:'›';
+  position:absolute;left:0;
+  color:var(--blood2);font-size:.6rem;
+}
+
+.card-tear{height:9px;flex-shrink:0;background:var(--parch);
+  clip-path:polygon(0 100%,1% 18%,2% 82%,3% 25%,4% 68%,5% 10%,6% 78%,7% 32%,8% 88%,9% 22%,10% 62%,11% 38%,12% 74%,13% 16%,14% 80%,15% 34%,16% 58%,17% 22%,18% 84%,19% 12%,20% 68%,21% 42%,22% 78%,23% 20%,24% 62%,25% 30%,26% 88%,27% 16%,28% 72%,29% 38%,30% 64%,31% 24%,32% 80%,33% 18%,34% 66%,35% 36%,36% 82%,37% 28%,38% 60%,39% 22%,40% 78%,41% 14%,42% 70%,43% 34%,44% 76%,45% 22%,46% 58%,47% 40%,48% 80%,49% 18%,50% 72%,51% 28%,52% 86%,53% 14%,54% 64%,55% 32%,56% 78%,57% 22%,58% 74%,59% 38%,60% 84%,61% 24%,62% 68%,63% 32%,64% 78%,65% 18%,66% 62%,67% 36%,68% 80%,69% 22%,70% 74%,71% 40%,72% 84%,73% 18%,74% 62%,75% 30%,76% 78%,77% 20%,78% 68%,79% 34%,80% 84%,81% 14%,82% 60%,83% 40%,84% 74%,85% 24%,86% 78%,87% 20%,88% 64%,89% 34%,90% 80%,91% 18%,92% 68%,93% 30%,94% 84%,95% 14%,96% 58%,97% 40%,98% 80%,99% 18%,100% 55%,100% 100%);}
+
+.card-embed{flex-shrink:0;background:rgba(10,8,5,.96);padding:.85rem 1rem;}
+.card-embed-label{font-family:'Special Elite',cursive;font-size:.47rem;letter-spacing:.28em;text-transform:uppercase;color:rgba(238,228,200,.2);margin-bottom:.5rem;}
+/* each embed item: optional label + iframe */
+.card-embed-item{margin-bottom:.6rem;}
+.card-embed-item:last-child{margin-bottom:0;}
+.card-embed-item-label{font-family:'Special Elite',cursive;font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(238,228,200,.3);margin-bottom:.28rem;}
+.card-embed iframe{width:100%;border:none;border-radius:4px;display:block;}
+.card-no-embed{font-family:'IM Fell English',serif;font-style:italic;font-size:.72rem;color:rgba(238,228,200,.18);padding:.3rem 0;}
+
+#card-close{display:flex;align-items:center;justify-content:center;width:100%;padding:.65rem;
+  background:none;border:none;border-top:1px solid rgba(238,228,200,.06);
+  font-family:'Special Elite',cursive;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(238,228,200,.25);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+#card-close:hover{color:var(--bone);}
+
+/* ═══════════════════════════════════
+   SHUFFLE
+═══════════════════════════════════ */
+#v-shuffle{background:var(--tar);}
+#v-shuffle.on{display:flex;flex-direction:column;padding-top:var(--nav-h);min-height:100vh;}
+#sh-top{padding:2.5rem 1.5rem 1.8rem;border-bottom:1px solid rgba(238,228,200,.05);}
+#sh-top h2{font-family:'UnifrakturMaguntia',cursive;font-size:clamp(2.8rem,8vw,5.5rem);color:var(--bone);line-height:.88;margin-bottom:.6rem;}
+.sh-lede{font-family:'Special Elite',cursive;font-style:normal;font-size:.9rem;color:rgba(238,228,200,.72);line-height:1.75;max-width:480px;text-shadow:0 1px 6px rgba(0,0,0,.9);}
+#sh-stage{flex:1;display:flex;flex-direction:column;min-height:400px;}
+#sh-draw-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:2.5rem 1.5rem;position:relative;overflow:hidden;min-height:260px;cursor:pointer;
+  border-bottom:1px solid rgba(238,228,200,.05);flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+#sh-bg-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;}
+#sh-deck{width:160px;height:230px;position:relative;z-index:1;}
+.deck-card{position:absolute;inset:0;border:1px solid rgba(184,120,10,.65);background:var(--tar2);transition:transform .35s;}
+.deck-card:nth-child(1){transform:rotate(-3deg) translate(-3px,3px);}
+.deck-card:nth-child(2){transform:rotate(-1.5deg) translate(-1px,1px);}
+.deck-card:nth-child(3){transform:rotate(0);}
+.deck-card:nth-child(3)::before{content:'';position:absolute;inset:7px;border:1px solid rgba(184,120,10,.45);}
+.deck-glyph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;pointer-events:none;}
+.dg-t{font-family:'UnifrakturMaguntia',cursive;font-size:3rem;color:rgba(184,120,10,.65);line-height:1;}
+.dg-l{font-family:'Special Elite',cursive;font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(184,120,10,.72);}
+.dg-ornament{font-size:.5rem;letter-spacing:.2em;color:rgba(184,120,10,.55);margin-top:.3rem;font-family:'Courier Prime',monospace;}
+#sh-deck:hover .deck-card:nth-child(1){transform:rotate(-4deg) translate(-5px,5px);}
+#sh-deck:hover .deck-card:nth-child(2){transform:rotate(-2deg) translate(-2px,2px);}
+/* sh-card-zone: on desktop = fixed height + internal scroll,
+   on mobile = natural height (body scrolls) */
+#sh-card-zone{
+  flex:1;
+  background:var(--tar2);
+  overflow-y:auto;
+  position:relative;
+}
+#sh-empty{
+  font-family:'Special Elite',cursive;font-size:.55rem;letter-spacing:.22em;
+  text-transform:uppercase;color:rgba(238,228,200,.1);
+  padding:2rem;
+}
+#sh-card{animation:rev .4s ease forwards;}
+@keyframes rev{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+#sh-bottom{border-top:1px solid rgba(238,228,200,.05);padding:1.2rem 1.5rem;display:flex;align-items:center;gap:1.5rem;}
+.sh-btn{font-family:'Special Elite',cursive;font-size:.76rem;letter-spacing:.16em;text-transform:uppercase;padding:.6rem 1.5rem;border:1px solid rgba(184,120,10,.4);background:transparent;color:var(--amber2);cursor:pointer;transition:all .22s;-webkit-tap-highlight-color:transparent;}
+.sh-btn:hover,.sh-btn:active{background:rgba(184,120,10,.1);border-color:var(--amber2);}
+#sh-counter{font-family:'Courier Prime',monospace;font-size:.76rem;color:rgba(238,228,200,.14);letter-spacing:.04em;}
+
+/* ═══════════════════════════════════
+   DESKTOP ≥768px
+═══════════════════════════════════ */
+@media(min-width:768px){
+  :root{--nav-h:44px;}
+
+  #v-mono.on{
+    display:grid;
+    grid-template-columns:1fr 1px 520px;
+    grid-template-rows:calc(100vh - var(--nav-h));
+    align-items:stretch;
+    padding-top:var(--nav-h);
+  }
+  /* #mono-bg-panel and #bg-canvas sizing handled below
+     alongside #card-panel for clarity */
+  #mono-div{display:block;background:rgba(238,228,200,.05);grid-column:2;grid-row:1;align-self:stretch;}
+  #card-panel{
+    display:block !important;
+    grid-column:3;grid-row:1;
+    position:sticky;top:var(--nav-h);
+    height:calc(100vh - var(--nav-h));
+    overflow-y:auto;
+  }
+  /* Keep left panel from growing taller than viewport and
+     creating scrollable space. It scrolls internally if needed. */
+  #mono-bg-panel{
+    position:sticky;
+    top:var(--nav-h);
+    height:calc(100vh - var(--nav-h));
+    overflow:hidden;
+    min-height:unset;
+  }
+  #bg-canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    min-height:unset;
+  }
+  /* content scrolls inside the sticky panel */
+  #mono-content{
+    height:100%;
+    overflow-y:auto;
+    overflow-x:hidden;
+    /* hide scrollbar visually */
+    scrollbar-width:none;
+  }
+  #mono-content::-webkit-scrollbar{display:none;}
+  #mono-empty{min-height:0;flex:1;padding:2rem;}
+  #mono-card{min-height:0;}
+  #card-close{display:none;}
+  #mono-content{padding:3rem 2.5rem 4rem;}
+  #spine-wrap{padding-left:2.5rem;}
+  #spine{left:calc(2.5rem + 13px);box-shadow:0 0 10px 2px rgba(184,120,10,.2);}
+  .vs{padding:1.6rem 1.5rem 0 3.8rem;}
+  .vs::before{left:2.5rem;}
+  .vs-knot{left:calc(2.5rem + 8px);}
+  .tn::before{left:-3.8rem;width:3.8rem;}
+
+  #sh-stage{flex-direction:row;flex:1;overflow:hidden;}
+  #sh-draw-zone{width:280px;flex-shrink:0;border-bottom:none;border-right:1px solid rgba(238,228,200,.05);min-height:auto;overflow-y:auto;}
+  /* Fixed height card zone: fills the row, content scrolls inside */
+  #sh-card-zone{flex:1;overflow-y:auto;height:100%;}
+  #v-shuffle.on{height:100vh;overflow:hidden;}
+  #sh-top{padding:3.5rem 3rem 2rem;flex-shrink:0;}
+  #sh-bottom{padding:1.4rem 3rem;flex-shrink:0;}
+}
+@media(min-width:1200px){.mh-h1{font-size:5rem;}}
+
+/* ── CRT phosphor RGB shift filter (applied via SVG filter) ── */
+#crt-filter{
+  position:fixed;inset:0;
+  pointer-events:none;z-index:993;
+  /* Bayer 4×4 ordered dithering pattern as repeating background.
+     The 16 values of a 4×4 Bayer matrix encoded as a PNG data URI
+     produce the characteristic Nintendo DS / Game Boy dithering look. */
+  background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAHklEQVQIW2NkYGD4z8BAAIIZQIKMjIz/GYYDABHyAx1KNq9oAAAAAElFTkSuQmCC");
+  background-repeat:repeat;
+  background-size:4px 4px;
+  mix-blend-mode:overlay;
+  opacity:.14;
+}
+</style>
+</head>
+<body>
+<div id="grain"></div>
+<div id="crt-filter"></div>
+<!-- SVG filter for CRT RGB phosphor separation — applied to .crt-wrap -->
+<svg style="position:fixed;width:0;height:0;overflow:hidden;pointer-events:none;z-index:-1" aria-hidden="true">
+  <defs>
+    <filter id="crt-phosphor" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <!-- Slight horizontal offset per channel to simulate phosphor triad misalignment -->
+      <feOffset in="SourceGraphic" dx="-0.4" dy="0" result="r-shift"/>
+      <feOffset in="SourceGraphic" dx="0.4"  dy="0" result="b-shift"/>
+      <feBlend in="r-shift" in2="b-shift" mode="screen" result="blend"/>
+      <feComposite in="blend" in2="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+</svg>
+<div id="vignette"></div>
+<div id="scanlines"></div>
+<nav id="nav">
+  <div id="nav-logo">ℌ·𝔖·𝔄</div>
+  <button class="nb on" onclick="show('mono')">Monochord</button>
+  <button class="nb" onclick="show('shuffle')">Shuffle</button>
+</nav>
+
+<!-- MONOCHORD -->
+<section class="view on" id="v-mono">
+  <div id="mono-bg-panel">
+    <canvas id="bg-canvas"></canvas>
+    <div id="mono-scrim"></div>
+    <div id="fludd-overlay">
+      <img id="fludd-img"
+        src="fludd_monochord.png"
+        alt="Robert Fludd — Celestial Monochord, 1617"
+      />
+    </div>
+    <div id="mono-content">
+      <div class="mh-eye">Folkways Records · FP 251–253 · New York · 1952</div>
+      <h1 class="mh-h1">Anthology<br>of American<br>Folk Music</h1>
+      <p class="mh-sub">84 commercial recordings of vernacular music, 1926–1933. Compiled by Harry Everett Smith. The founding document of the American folk revival — the old, weird America.</p>
+      <div id="spine-wrap">
+        <div id="spine"></div>
+        <div class="vs vs-I" id="vs-I">
+          <div class="vs-knot"></div>
+          <div class="vs-header" onclick="toggleVol('I')"><span class="vs-label">Vol. I</span><span class="vs-title">Ballads</span><span class="vs-chevron">›</span></div>
+          <div class="vs-tracks" id="vt-I"></div>
+        </div>
+        <div class="vs vs-II" id="vs-II">
+          <div class="vs-knot"></div>
+          <div class="vs-header" onclick="toggleVol('II')"><span class="vs-label">Vol. II</span><span class="vs-title">Social Music</span><span class="vs-chevron">›</span></div>
+          <div class="vs-tracks" id="vt-II"></div>
+        </div>
+        <div class="vs vs-III" id="vs-III">
+          <div class="vs-knot"></div>
+          <div class="vs-header" onclick="toggleVol('III')"><span class="vs-label">Vol. III</span><span class="vs-title">Songs</span><span class="vs-chevron">›</span></div>
+          <div class="vs-tracks" id="vt-III"></div>
+        </div>
+        <div class="vs vs-IV" id="vs-IV">
+          <div class="vs-knot"></div>
+          <div class="vs-header" onclick="toggleVol('IV')"><span class="vs-label">Vol. IV</span><span class="vs-title">Labor Songs</span><span class="vs-chevron">›</span></div>
+          <div class="vs-tracks" id="vt-IV"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="mono-div"></div>
+  <div id="card-panel">
+    <canvas id="right-noise-canvas"></canvas>
+    <div id="mono-empty"><span class="me-g">𝔄</span><span class="me-h">Select a track</span></div>
+    <div id="mono-card">
+      <!-- images above the text card -->
+      <div class="card-img-slot" id="cb-imgs-top"></div>
+      <div class="card-band">
+        <span class="cb-num" id="cb-num">—</span>
+        <span class="cb-vol" id="cb-vol">—</span>
+      </div>
+      <div class="card-body">
+
+        <!-- header: big number + title / artist -->
+        <div class="cb-header-row">
+          <div class="cb-big-num" id="cb-big-num">—</div>
+          <div class="cb-title-block">
+            <div class="cb-title"     id="cb-title">—</div>
+            <div class="cb-label-info" id="cb-label-info" style="display:none"></div>
+            <div class="cb-artist"    id="cb-artist">—</div>
+            <div class="cb-instrumentation" id="cb-instrumentation" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- metadata strip: recording date · issue number · genre -->
+        <div class="cb-meta-strip">
+          <div class="cb-meta-cell">
+            <span class="cb-meta-key">Rec. date</span>
+            <span class="cb-meta-val" id="cb-year">—</span>
+          </div>
+          <div class="cb-meta-cell" id="cb-issue-cell" style="display:none">
+            <span class="cb-meta-key">Issue no.</span>
+            <span class="cb-meta-val" id="cb-issue">—</span>
+          </div>
+          <div class="cb-meta-cell">
+            <span class="cb-meta-key">Genre</span>
+            <span class="cb-meta-val" id="cb-genre">—</span>
+          </div>
+        </div>
+
+        <!-- synopsis / headline -->
+        <div class="cb-section">
+          <div class="cb-section-label">Synopsis</div>
+          <div class="cb-hl" id="cb-hl">—</div>
+        </div>
+
+        <!-- general notes (hidden when empty) -->
+        <div class="cb-section" id="cb-notes-section" style="display:none">
+          <div class="cb-section-label">Notes</div>
+          <div class="cb-notes" id="cb-notes"></div>
+        </div>
+
+        <!-- discography (hidden when empty) -->
+        <div class="cb-section" id="cb-disco-section" style="display:none">
+          <div class="cb-section-label">Discography</div>
+          <ul class="cb-list" id="cb-disco"></ul>
+        </div>
+
+        <!-- bibliography (hidden when empty) -->
+        <div class="cb-section" id="cb-biblio-section" style="display:none">
+          <div class="cb-section-label">Bibliography</div>
+          <ul class="cb-list" id="cb-biblio"></ul>
+        </div>
+
+      </div>
+      <div class="card-tear"></div>
+      <!-- images below the text card, above the embed -->
+      <div class="card-img-slot" id="cb-imgs-bottom"></div>
+      <div class="card-embed">
+        <div class="card-embed-label">Listen</div>
+        <div id="cb-embed-wrap"></div>
+      </div>
+    </div>
+    <button id="card-close" onclick="closeCard()">← back to tracks</button>
+  </div>
+</section>
+
+<!-- SHUFFLE -->
+<section class="view" id="v-shuffle">
+  <div id="sh-top">
+    <h2>Draw from<br>the Archive</h2>
+    <p class="sh-lede">Smith never revealed the race of performers, preventing listeners from assessing the music in racial terms. Each draw surfaces one of 84 songs as he intended — blind, strange, complete.</p>
+  </div>
+  <div id="sh-stage">
+    <div id="sh-draw-zone" onclick="drawCard(event)">
+      <canvas id="sh-bg-canvas"></canvas>
+      <div id="sh-deck">
+        <div class="deck-card"></div>
+        <div class="deck-card"></div>
+        <div class="deck-card"><div class="deck-glyph"><div class="dg-t">𝔄</div><div class="dg-l">Touch to draw</div><div class="dg-ornament">✦ · ✦ · ✦</div></div></div>
+      </div>
+    </div>
+    <!-- Shuffle card panel — reuses all mono-card styles -->
+    <div id="sh-card-zone">
+      <div id="sh-empty">No card drawn yet</div>
+      <div id="sh-card" style="display:none">
+        <!-- images above -->
+        <div class="card-img-slot" id="sh-imgs-top"></div>
+        <div class="card-band">
+          <span class="cb-num" id="sh-num">—</span>
+          <span class="cb-vol" id="sh-cvol">—</span>
+        </div>
+        <div class="card-body">
+          <div class="cb-header-row">
+            <div class="cb-big-num" id="sh-big-num">—</div>
+            <div class="cb-title-block">
+              <div class="cb-title"          id="sh-title">—</div>
+              <div class="cb-label-info"     id="sh-label-info"  style="display:none"></div>
+              <div class="cb-artist"         id="sh-artist">—</div>
+              <div class="cb-instrumentation" id="sh-inst"       style="display:none"></div>
+            </div>
+          </div>
+          <div class="cb-meta-strip">
+            <div class="cb-meta-cell">
+              <span class="cb-meta-key">Rec. date</span>
+              <span class="cb-meta-val" id="sh-year">—</span>
+            </div>
+            <div class="cb-meta-cell" id="sh-issue-cell" style="display:none">
+              <span class="cb-meta-key">Issue no.</span>
+              <span class="cb-meta-val" id="sh-issue">—</span>
+            </div>
+            <div class="cb-meta-cell">
+              <span class="cb-meta-key">Genre</span>
+              <span class="cb-meta-val" id="sh-genre">—</span>
+            </div>
+          </div>
+          <div class="cb-section">
+            <div class="cb-section-label">Synopsis</div>
+            <div class="cb-hl" id="sh-hl">—</div>
+          </div>
+          <div class="cb-section" id="sh-notes-section" style="display:none">
+            <div class="cb-section-label">Notes</div>
+            <div class="cb-notes" id="sh-notes"></div>
+          </div>
+          <div class="cb-section" id="sh-disco-section" style="display:none">
+            <div class="cb-section-label">Discography</div>
+            <ul class="cb-list" id="sh-disco"></ul>
+          </div>
+          <div class="cb-section" id="sh-biblio-section" style="display:none">
+            <div class="cb-section-label">Bibliography</div>
+            <ul class="cb-list" id="sh-biblio"></ul>
+          </div>
+        </div>
+        <div class="card-tear"></div>
+        <!-- images below -->
+        <div class="card-img-slot" id="sh-imgs-bottom"></div>
+        <div class="card-embed">
+          <div class="card-embed-label">Listen</div>
+          <div id="sh-embed-wrap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="sh-bottom">
+    <span id="sh-counter">0 of 84 drawn</span>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+/* ── DATA ──
+   Track data now loads from an external tracks.json file
+   (created/edited via anthology_editor.py) instead of being
+   hardcoded here. T starts empty and is populated by
+   loadTrackData() before the UI builds itself. */
+let T=[];
+const VN={I:"Volume I — Ballads",II:"Volume II — Social Music",III:"Volume III — Songs",IV:"Volume IV — Labor Songs"};
+const TRACKS_JSON_PATH="tracks.json";
+
+/* Tiny built-in fallback so the page still shows *something*
+   if tracks.json is missing or fetch() fails — e.g. when the
+   file is opened directly as file:// in a browser that blocks
+   local fetch() of JSON for security reasons. */
+const FALLBACK_T=[
+  {n:"I·1",v:"I",o:1,t:"Henry Lee",a:"Dick Justice",y:"1929",g:"murder ballad",
+   h:"MAN SLAIN BY WOMAN HE REFUSES; BODY THROWN DOWN A WELL",
+   spotifyLinks:[{id:"3MoKGJEDhkWC0lVHOgSCiE",label:"Primary recording"}],
+   imgsTop:[],imgsBottom:[],labelInfo:"",instrumentation:"",issueNumber:"",notes:"",discography:[],bibliography:[]},
+  {n:"I·2",v:"I",o:2,t:"The Fatal Flower Garden",a:"Nelstone's Hawaiians",y:"1929",g:"ballad",
+   h:"ENGLISH CHILD LURED BY JEWESS; THROAT CUT IN GARDEN",
+   spotifyLinks:[],imgsTop:[],imgsBottom:[],labelInfo:"",instrumentation:"",issueNumber:"",notes:"",discography:[],bibliography:[]},
+];
+
+async function loadTrackData(){
+  try{
+    const res=await fetch(TRACKS_JSON_PATH,{cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    if(!Array.isArray(data)||data.length===0) throw new Error("tracks.json is empty or malformed");
+    T=data;
+    console.info(`[anthology] loaded ${T.length} tracks from ${TRACKS_JSON_PATH}`);
+  }catch(err){
+    console.warn(`[anthology] could not load ${TRACKS_JSON_PATH} (${err.message}) — using built-in fallback data. `+
+                 `If you're opening this file directly (file://), some browsers block local fetch() — `+
+                 `try running a local server, e.g. "python3 -m http.server" in this folder.`);
+    T=FALLBACK_T;
+    showDataWarning();
+  }
+}
+
+function showDataWarning(){
+  const banner=document.createElement('div');
+  banner.id='data-warning';
+  banner.style.cssText=`
+    position:fixed;bottom:0;left:0;right:0;z-index:996;
+    background:rgba(91,22,8,.95);color:#EEE4C8;
+    font-family:'Courier Prime',monospace;font-size:.68rem;
+    padding:.6rem 1rem;text-align:center;letter-spacing:.02em;
+  `;
+  banner.textContent=`Could not load ${TRACKS_JSON_PATH} — showing fallback data. `+
+    `If viewing this file directly, try serving it locally (e.g. "python3 -m http.server").`;
+  document.body.appendChild(banner);
+}
+
+/* ── NAV ── */
+function show(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('v-'+id).classList.add('on');
+  document.querySelectorAll('.nb').forEach((b,i)=>b.classList.toggle('on',['mono','shuffle'][i]===id));
+  if(id==='shuffle'&&!shReady){shReady=true;requestAnimationFrame(()=>requestAnimationFrame(initShGL));}
+}
+
+/* ═══════════════════════════════════════════════
+   WEBGL ENGINE
+   Key design: ONE context, ONE program per canvas.
+   switchBgVol only updates uniforms on the SAME
+   program — no new context, no stale locations.
+═══════════════════════════════════════════════ */
+const VERT=`attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}`;
+const FRAG=`
+precision mediump float;
+uniform float u_t,u_spd,u_sc,u_mode;
+uniform vec2 u_res,u_pan;
+uniform vec3 u_col;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){
+  vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
+  return mix(mix(h(i),h(i+vec2(1,0)),u.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),u.x),u.y);
+}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<6;i++){v+=a*n(p);p*=2.07;a*=.48;}return v;}
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_res;
+  float t=u_t*u_spd,val;
+
+  if(u_mode<.5){
+    /* AIR — northern lights / wind across grass.
+       Two fbm layers stretched wide on x-axis create
+       horizontal bands that drift slowly upward.
+       A low-frequency swell adds depth. No power curve —
+       keep the full range so midtones stay visible. */
+    vec2 p=uv*vec2(u_sc*2.4,u_sc*.6)+u_pan*vec2(.6,.3);
+    float a=fbm(p+vec2(t*.05,t*.014));
+    float b=fbm(p*1.3+vec2(-t*.035,t*.01));
+    float swell=fbm(uv*u_sc*.4+vec2(t*.025,-t*.018));
+    val=a*.55+b*.25+swell*.20;
+    /* gentle contrast lift — preserves full brightness range */
+    val=val*.9+.14;
+
+  } else if(u_mode<1.5){
+    /* FIRE — deep furnace glow.
+       Core strategy: start from a bright base (.35),
+       then add two fbm layers for variation.
+       No aggressive power curve — fire should be luminous
+       across the whole surface, darkening only in pockets. */
+    vec2 p=uv*u_sc+u_pan*vec2(.4,.8);
+    float base=.42;
+    float a=fbm(p+vec2(t*.03, t*.07));
+    float b=fbm(p*.85+vec2(-t*.02, t*.09));
+    /* upward-warped flicker */
+    float warp=a*.3;
+    float flicker=fbm(p+vec2(t*.025,t*.08+warp));
+    val=base+flicker*.38+a*.15+b*.12;
+    val=clamp(val,0.,1.);
+
+  } else if(u_mode<2.5){
+    /* WATER — deep ocean lit from below.
+       Two crossing sine waves give interference pattern,
+       fbm breaks up the regularity. Bright base ensures
+       visibility; the interference creates shimmer. */
+    float base=.36;
+    vec2 puv=uv+u_pan*vec2(.5,.2);
+    float w1=sin(puv.x*u_sc*2.2+uv.y*u_sc*.4+t*.04)*.5+.5;
+    float w2=sin(puv.y*u_sc*1.8-puv.x*u_sc*.3-t*.03)*.5+.5;
+    float interference=(w1+w2)*.5;
+    float detail=fbm(puv*u_sc+vec2(t*.02,-t*.016));
+    val=base+interference*.38+detail*.24;
+    val=clamp(val,0.,1.);
+
+  } else if(u_mode<3.5){
+    /* EARTH — rolling field and layered soil.
+       Gentle multi-scale fbm, very slow drift.
+       One layer at coarse scale (hills), one fine (texture).
+       Soft ridges emerge without harsh blotching. */
+    vec2 epuv=uv+u_pan*vec2(.3,.5);
+    float coarse=fbm(epuv*u_sc*.8+vec2(t*.006,t*.004));
+    float fine  =fbm(epuv*u_sc*2.2+vec2(t*.009,-t*.006));
+    float micro =fbm(epuv*u_sc*4.5+vec2(-t*.004,t*.007));
+    val=coarse*.5+fine*.3+micro*.2;
+    val=val*.85+.14;
+
+  } else {
+    /* SHUFFLE — ambient amber drift */
+    float a=fbm(uv*u_sc+vec2(t*.025,-t*.018));
+    val=a*.8+.16;
+  }
+
+  /* boosted output */
+  gl_FragColor=vec4(u_col*val*1.15,clamp(val*1.2,0.,1.)*.97);
+}`;
+
+/* Build a self-contained GL renderer for one canvas.
+   Returns an object {draw(t), setVol(mode,col,spd,sc)}
+   Never re-create the context or program. */
+function buildGL(canvasId){
+  const canvas=document.getElementById(canvasId);
+  const gl=canvas.getContext('webgl',{alpha:true,premultipliedAlpha:false,antialias:false});
+  if(!gl){console.warn('WebGL unavailable');return null;}
+
+  function mkShader(type,src){
+    const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;
+  }
+  const pr=gl.createProgram();
+  gl.attachShader(pr,mkShader(gl.VERTEX_SHADER,VERT));
+  gl.attachShader(pr,mkShader(gl.FRAGMENT_SHADER,FRAG));
+  gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){
+    console.error('GL link:',gl.getProgramInfoLog(pr));return null;
+  }
+  gl.useProgram(pr);
+
+  const buf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  const al=gl.getAttribLocation(pr,'a');
+  gl.enableVertexAttribArray(al);
+  gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+
+  /* Store ALL uniform locations once, from the one program. */
+  const U={
+    t:  gl.getUniformLocation(pr,'u_t'),
+    res:gl.getUniformLocation(pr,'u_res'),
+    col:gl.getUniformLocation(pr,'u_col'),
+    spd:gl.getUniformLocation(pr,'u_spd'),
+    sc: gl.getUniformLocation(pr,'u_sc'),
+    mod:gl.getUniformLocation(pr,'u_mode'),
+    pan:gl.getUniformLocation(pr,'u_pan'),
+  };
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+
+  let W=0,H=0;
+
+  /* Sync canvas pixel dimensions to its CSS layout size.
+     Uses the PANEL's bounding rect so the canvas (which
+     is position:absolute inside it) gets the right size
+     even before it has any intrinsic dimensions. */
+  function sync(){
+    /* Canvas is now in normal flow via CSS grid — measure it directly */
+    const nW=canvas.offsetWidth||Math.round(canvas.getBoundingClientRect().width);
+    const nH=canvas.offsetHeight||Math.round(canvas.getBoundingClientRect().height);
+    if(nW<1||nH<1||nW===W&&nH===H) return;
+    W=nW;H=nH;
+    canvas.width=W;canvas.height=H;
+    gl.useProgram(pr);
+    gl.viewport(0,0,W,H);
+    gl.uniform2f(U.res,W,H);
+  }
+
+  /* Observe the canvas itself — it now has real layout dimensions */
+  const ro=new ResizeObserver(()=>{sync();});
+  ro.observe(canvas);
+  sync();
+
+  return {
+    setVol(mode,col,spd,sc){
+      gl.useProgram(pr);
+      gl.uniform1f(U.mod,mode);
+      gl.uniform3fv(U.col,col);
+      gl.uniform1f(U.spd,spd);
+      gl.uniform1f(U.sc,sc);
+    },
+    draw(t){
+      if(W<1||H<1){sync();return;}
+      gl.useProgram(pr);
+      gl.uniform1f(U.t,t);
+      gl.uniform2f(U.pan, t*0.0010, t*0.0007);
+      gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+    }
+  };
+}
+
+// Colours per volume — tuned to classical element hues
+const VC={
+  I:  [.14,.70,.28],  // air    — bright sage green (CSS title is desaturated, shader is vivid)
+  II: [.88,.18,.06],  // fire   — bright red-orange
+  III:[.08,.48,.82],  // water  — bright ocean blue
+  IV: [.72,.54,.06],  // earth  — bright ochre
+  SH: [.60,.36,.06],  // shuffle — amber
+};
+// Shader mode + speed + scale per volume
+const VP={
+  I:  {m:0,sp:.007,sc:2.8},  // air   — drifting streamlines
+  II: {m:1,sp:.009,sc:3.0},  // fire  — rising heat
+  III:{m:2,sp:.006,sc:2.4},  // water — slow waves
+  IV: {m:3,sp:.004,sc:3.5},  // earth — cracked soil
+  SH: {m:4,sp:.006,sc:2.4},  // shuffle
+};
+
+let bgGL=null,bgT=0,bgRaf=null,activeVol='I';
+let shGL=null,shT=0,shRaf=null,shReady=false;
+
+function initBgGL(){
+  bgGL=buildGL('bg-canvas');
+  if(!bgGL) return;
+  const p=VP[activeVol];
+  bgGL.setVol(p.m,VC[activeVol],p.sp,p.sc);
+  if(bgRaf) return;
+  (function fr(){bgT++;bgGL&&bgGL.draw(bgT);bgRaf=requestAnimationFrame(fr);})();
+}
+
+function switchBgVol(v){
+  activeVol=v;
+  if(!bgGL) return;
+  const p=VP[v];
+  bgGL.setVol(p.m,VC[v],p.sp,p.sc);
+}
+
+function initShGL(){
+  shGL=buildGL('sh-bg-canvas');
+  if(!shGL) return;
+  shGL.setVol(VP.SH.m,VC.SH,VP.SH.sp,VP.SH.sc);
+  if(shRaf) return;
+  (function fr(){shT++;shGL&&shGL.draw(shT);shRaf=requestAnimationFrame(fr);})();
+}
+
+/* Right panel static noise — 2D canvas, cheap, redraws infrequently */
+function initRightNoise(){
+  const c=document.getElementById('right-noise-canvas');
+  const ctx=c.getContext('2d');
+  function draw(){
+    const p=c.parentElement;
+    const W=p.offsetWidth||320,H=p.offsetHeight||600;
+    if(W<1||H<1) return;
+    c.width=W;c.height=H;
+    const img=ctx.createImageData(W,H);
+    const d=img.data;
+    for(let i=0;i<d.length;i+=4){const v=(Math.random()*22)|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=18;}
+    ctx.putImageData(img,0,0);
+  }
+  draw();
+  setInterval(draw,3500);
+  window.addEventListener('resize',draw,{passive:true});
+}
+
+/* Background-texture + noise init now happens in the
+   combined bootstrap at the bottom of this script, after
+   both track data and fonts are ready. */
+
+/* ── MONOCHORD ── */
+function buildMono(){
+  ['I','II','III','IV'].forEach(v=>{
+    const c=document.getElementById('vt-'+v);
+    T.filter(t=>t.v===v).forEach(t=>{
+      const row=document.createElement('div');
+      row.className='tn';
+      row.innerHTML=`<span class="tn-n">${t.o}</span><span class="tn-t">${t.t}</span><span class="tn-dot"></span>`;
+      row.addEventListener('click',()=>showCard(t,row));
+      row.addEventListener('mouseenter',()=>showCard(t,row));
+      c.appendChild(row);
+    });
+  });
+}
+
+function toggleVol(v){
+  const el=document.getElementById('vs-'+v);
+  const wasOpen=el.classList.contains('open');
+  document.querySelectorAll('.vs').forEach(s=>s.classList.remove('open'));
+  if(!wasOpen){
+    el.classList.add('open');
+    switchBgVol(v);
+    const nodes=el.querySelectorAll('.tn');
+    gsap.fromTo(nodes,{opacity:0,x:-8},{opacity:1,x:0,stagger:.035,duration:.28,ease:'power2.out',delay:.04});
+  }
+}
+
+const isMobile=()=>window.innerWidth<768;
+
+/* ── renderImgSlot — module-level so both showCard and drawCard can use it ── */
+function renderImgSlot(slotEl, images, trackTitle){
+  slotEl.innerHTML='';
+  const imgs=(images||[]).filter(x=>x&&x.url);
+  if(!imgs.length){slotEl.classList.remove('has-images');return;}
+  slotEl.classList.add('has-images');
+  const row=document.createElement('div');
+  row.className='cis-row';
+  const n=imgs.length;
+  const slotW=slotEl.offsetWidth||320;
+  const frameW=n===1?slotW:n<=3?Math.floor(slotW/n):160;
+  if(n>1){const badge=document.createElement('div');badge.className='cis-badge';badge.textContent=n+' images';slotEl._badge=badge;}
+  imgs.forEach(img=>{
+    const frame=document.createElement('div');
+    frame.className='cis-frame';
+    frame.style.width=frameW+'px';
+    const el=document.createElement('img');
+    el.className='loading';
+    el.alt=trackTitle||'';
+    el.loading='lazy';
+    el.onload=()=>el.classList.remove('loading');
+    el.onerror=()=>{el.style.display='none';};
+    el.src=img.url;
+    frame.appendChild(el);
+    if(img.credit){const cred=document.createElement('span');cred.className='cis-credit';cred.textContent=img.credit;frame.appendChild(cred);}
+    row.appendChild(frame);
+  });
+  slotEl.appendChild(row);
+  if(n>1&&row.firstChild) row.firstChild.appendChild(slotEl._badge);
+}
+
+function showCard(t,rowEl){
+  document.querySelectorAll('.tn.sel').forEach(n=>n.classList.remove('sel'));
+  if(rowEl) rowEl.classList.add('sel');
+
+  const panel=document.getElementById('card-panel');
+  const empty=document.getElementById('mono-empty');
+  const card=document.getElementById('mono-card');
+
+  empty.style.display='none';
+  card.classList.remove('show');
+  void card.offsetWidth;
+
+  document.getElementById('cb-num').textContent=t.n;
+  document.getElementById('cb-vol').textContent=VN[t.v];
+  document.getElementById('cb-big-num').textContent=t.o;
+  document.getElementById('cb-title').textContent=t.t;
+  document.getElementById('cb-artist').textContent=t.a;
+  document.getElementById('cb-year').textContent=t.y||'—';
+  document.getElementById('cb-genre').textContent=t.g||'—';
+  document.getElementById('cb-hl').textContent=t.h||'—';
+  card.dataset.vol=t.v;
+
+  // optional: label info
+  function setOptional(elId, val){
+    const el=document.getElementById(elId);
+    if(val){el.textContent=val;el.style.display='';}
+    else{el.style.display='none';}
+  }
+  setOptional('cb-label-info',    t.labelInfo);
+  setOptional('cb-instrumentation', t.instrumentation);
+
+  // issue number cell
+  const issueCell=document.getElementById('cb-issue-cell');
+  if(t.issueNumber){
+    document.getElementById('cb-issue').textContent=t.issueNumber;
+    issueCell.style.display='';
+  } else {
+    issueCell.style.display='none';
+  }
+
+  // notes
+  const notesSection=document.getElementById('cb-notes-section');
+  if(t.notes){
+    document.getElementById('cb-notes').textContent=t.notes;
+    notesSection.style.display='';
+  } else {
+    notesSection.style.display='none';
+  }
+
+  // discography
+  const discoSection=document.getElementById('cb-disco-section');
+  const discoList=document.getElementById('cb-disco');
+  discoList.innerHTML='';
+  if(t.discography&&t.discography.length){
+    t.discography.forEach(entry=>{
+      const li=document.createElement('li');
+      li.textContent=entry;
+      discoList.appendChild(li);
+    });
+    discoSection.style.display='';
+  } else {
+    discoSection.style.display='none';
+  }
+
+  // bibliography
+  const biblioSection=document.getElementById('cb-biblio-section');
+  const biblioList=document.getElementById('cb-biblio');
+  biblioList.innerHTML='';
+  if(t.bibliography&&t.bibliography.length){
+    t.bibliography.forEach(entry=>{
+      const li=document.createElement('li');
+      li.textContent=entry;
+      biblioList.appendChild(li);
+    });
+    biblioSection.style.display='';
+  } else {
+    biblioSection.style.display='none';
+  }
+
+  renderImgSlot(document.getElementById('cb-imgs-top'),    t.imgsTop,    t.t);
+  renderImgSlot(document.getElementById('cb-imgs-bottom'), t.imgsBottom, t.t);
+
+  const ew=document.getElementById('cb-embed-wrap');
+  ew.innerHTML='';
+  const links=(t.spotifyLinks||[]).filter(l=>l&&l.id);
+  if(links.length){
+    links.forEach(link=>{
+      const item=document.createElement('div');
+      item.className='card-embed-item';
+      if(link.label&&links.length>1){
+        const lbl=document.createElement('div');
+        lbl.className='card-embed-item-label';
+        lbl.textContent=link.label;
+        item.appendChild(lbl);
+      }
+      const ifr=document.createElement('iframe');
+      ifr.src=`https://open.spotify.com/embed/track/${link.id}?utm_source=generator&theme=0`;
+      ifr.height='80';
+      ifr.allow='autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+      ifr.loading='lazy';
+      item.appendChild(ifr);
+      ew.appendChild(item);
+    });
+  } else {
+    const msg=document.createElement('div');
+    msg.className='card-no-embed';
+    msg.textContent='No recording linked — add a Spotify track ID via the editor.';
+    ew.appendChild(msg);
+  }
+
+  card.classList.add('show');
+  panel.classList.add('active');
+
+  gsap.fromTo('#cb-title',{opacity:0,y:4},{opacity:1,y:0,duration:.26,ease:'power2.out'});
+  gsap.fromTo('#cb-hl',{opacity:0},{opacity:1,duration:.36,delay:.12});
+
+  /* MOBILE: smoothly scroll the card panel into view */
+  if(isMobile()){
+    /* Small delay so the panel has rendered before we measure */
+    setTimeout(()=>{
+      panel.scrollIntoView({behavior:'smooth',block:'start'});
+    },50);
+  }
+}
+
+function closeCard(){
+  const panel=document.getElementById('card-panel');
+  panel.classList.remove('active');
+  document.getElementById('mono-card').classList.remove('show');
+  document.getElementById('mono-empty').style.display='flex';
+  document.querySelectorAll('.tn.sel').forEach(n=>n.classList.remove('sel'));
+}
+
+/* ── BOOTSTRAP ──
+   Wait for track data (fetch) AND fonts/layout before
+   building the UI. Both must resolve; order doesn't matter,
+   so we race them with Promise.all. */
+Promise.all([
+  loadTrackData(),
+  document.fonts.ready
+]).then(()=>{
+  buildMono();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    initBgGL();
+    initRightNoise();
+  }));
+});
+
+/* ── SHUFFLE ── */
+let drawn=new Set(),drawN=0;
+
+function drawCard(e){
+  if(e&&e.preventDefault) e.preventDefault();
+  if(drawn.size>=T.length) drawn.clear();
+  let idx;do{idx=Math.floor(Math.random()*T.length);}while(drawn.has(idx));
+  drawn.add(idx);drawN++;
+  const t=T[idx];
+
+  document.getElementById('sh-empty').style.display='none';
+  const card=document.getElementById('sh-card');
+  card.style.display='none';
+  void card.offsetWidth; // force reflow for animation replay
+
+  setTimeout(()=>{
+    // ── text fields ──
+    document.getElementById('sh-num').textContent=t.n;
+    document.getElementById('sh-cvol').textContent=VN[t.v];
+    document.getElementById('sh-big-num').textContent=t.o;
+    document.getElementById('sh-title').textContent=t.t;
+    document.getElementById('sh-artist').textContent=t.a;
+    document.getElementById('sh-year').textContent=t.y||'—';
+    document.getElementById('sh-genre').textContent=t.g||'—';
+    document.getElementById('sh-hl').textContent=t.h||'—';
+
+    function setOpt(id,val){const el=document.getElementById(id);if(val){el.textContent=val;el.style.display='';}else{el.style.display='none';}}
+    setOpt('sh-label-info',t.labelInfo);
+    setOpt('sh-inst',t.instrumentation);
+
+    const issueCell=document.getElementById('sh-issue-cell');
+    if(t.issueNumber){document.getElementById('sh-issue').textContent=t.issueNumber;issueCell.style.display='';}
+    else{issueCell.style.display='none';}
+
+    const notesSection=document.getElementById('sh-notes-section');
+    if(t.notes){document.getElementById('sh-notes').textContent=t.notes;notesSection.style.display='';}
+    else{notesSection.style.display='none';}
+
+    function populateList(sectionId,listId,items){
+      const sec=document.getElementById(sectionId),ul=document.getElementById(listId);
+      ul.innerHTML='';
+      if(items&&items.length){items.forEach(e=>{const li=document.createElement('li');li.textContent=e;ul.appendChild(li);});sec.style.display='';}
+      else{sec.style.display='none';}
+    }
+    populateList('sh-disco-section','sh-disco',t.discography);
+    populateList('sh-biblio-section','sh-biblio',t.bibliography);
+
+    // ── images ──
+    renderImgSlot(document.getElementById('sh-imgs-top'),t.imgsTop,t.t);
+    renderImgSlot(document.getElementById('sh-imgs-bottom'),t.imgsBottom,t.t);
+
+    // ── spotify embeds ──
+    const ew=document.getElementById('sh-embed-wrap');
+    ew.innerHTML='';
+    const links=(t.spotifyLinks||[]).filter(l=>l&&l.id);
+    if(links.length){
+      links.forEach(link=>{
+        const item=document.createElement('div');item.className='card-embed-item';
+        if(link.label&&links.length>1){const lbl=document.createElement('div');lbl.className='card-embed-item-label';lbl.textContent=link.label;item.appendChild(lbl);}
+        const ifr=document.createElement('iframe');
+        ifr.src=`https://open.spotify.com/embed/track/${link.id}?utm_source=generator&theme=0`;
+        ifr.height='80';ifr.allow='autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';ifr.loading='lazy';
+        item.appendChild(ifr);ew.appendChild(item);
+      });
+    } else {
+      const msg=document.createElement('div');msg.className='card-no-embed';msg.textContent='No recording linked — add a Spotify track ID via the editor.';ew.appendChild(msg);
+    }
+
+    // ── vol accent colour on band ──
+    card.dataset.vol=t.v;
+    card.style.display='block';
+    document.getElementById('sh-card-zone').scrollTop=0;
+    gsap.fromTo(card,{opacity:0,y:6},{opacity:1,y:0,duration:.35,ease:'power2.out'});
+    document.getElementById('sh-counter').textContent=drawN+' of 84 drawn';
+  },160);
+}
+
+/* grain movement handled entirely by CSS steps() animation */
+</script>
+</body>
+</html>
