@@ -117,11 +117,21 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 #bg-canvas{
   display:block;
   width:100%;
-  /* height driven by grid row — will match panel height */
+  /* height driven by grid row on desktop */
   align-self:stretch;
   justify-self:stretch;
   pointer-events:none;
   z-index:0;
+}
+/* Mobile: canvas needs explicit position/size since grid min-height
+   doesn't give the 1fr row a real height for stretch to resolve */
+@media(max-width:767px){
+  #bg-canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+  }
 }
 
 #mono-scrim{
@@ -989,7 +999,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 <section class="view" id="v-shuffle">
   <div id="sh-top">
     <h2>Draw from<br>the Archive</h2>
-    <p class="sh-lede">Smith never revealed the race of performers, preventing listeners from assessing the music in racial terms. Each draw surfaces one of 84 songs at random.</p>
+    <p class="sh-lede">Smith never revealed the race of performers, preventing listeners from assessing the music in racial terms. Each draw surfaces one of 84 songs as he intended — blind, strange, complete.</p>
   </div>
   <div id="sh-stage">
     <div id="sh-draw-zone" onclick="drawCard(event)">
@@ -1372,6 +1382,7 @@ function buildGL(canvasId){
   sync();
 
   return {
+    _sync(){sync();},
     setVol(mode,col,spd,sc){
       gl.useProgram(pr);
       gl.uniform1f(U.mod,mode);
@@ -1412,6 +1423,8 @@ let shGL=null,shT=0,shRaf=null,shReady=false;
 function initBgGL(){
   bgGL=buildGL('bg-canvas');
   if(!bgGL) return;
+  /* On mobile the canvas may have zero size at init time — retry after layout settles */
+  setTimeout(()=>{ if(bgGL) bgGL.draw&&bgGL._sync&&bgGL._sync(); }, 200);
   const p=VP[activeVol];
   bgGL.setVol(p.m,VC[activeVol],p.sp,p.sc);
   if(bgRaf) return;
