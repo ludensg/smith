@@ -202,6 +202,21 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
   .mh-eye{font-size:.54rem;margin-bottom:.3rem;}
   #mono-content::before{display:none;}
   #spine-wrap{margin-top:.6rem;}
+  /* Dark scrim behind the volume list for readability over the monochord */
+  #spine-wrap::before{
+    content:'';
+    position:absolute;
+    inset:-2rem -2rem -2rem -3rem;
+    background:radial-gradient(
+      ellipse 90% 85% at 45% 50%,
+      rgba(6,4,2,.52) 0%,
+      rgba(6,4,2,.38) 45%,
+      rgba(6,4,2,0)   100%
+    );
+    z-index:0;
+    pointer-events:none;
+  }
+  #spine-wrap>*{position:relative;z-index:1;}
   .vs{padding:.4rem .6rem 0 2.2rem;}
   .vs-title{font-size:clamp(1.2rem,6.5vw,1.8rem);}
   .vs-label{font-size:.52rem;letter-spacing:.18em;}
@@ -329,7 +344,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 .me-g{font-family:'UnifrakturMaguntia',cursive;font-size:7rem;color:rgba(184,120,10,.18);line-height:1;margin-bottom:.8rem;}
 .me-h{font-family:'Special Elite',cursive;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,228,200,.55);}
 
-#mono-card{display:none;flex-direction:column;z-index:1;position:relative;animation:c-in .3s ease forwards;}
+#mono-card{display:none;flex-direction:column;z-index:1;position:relative;animation:c-in .3s ease forwards;overflow:hidden;}
 #mono-card.show{display:flex;}
 @keyframes c-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
@@ -347,6 +362,15 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 .cis-badge{position:absolute;top:.4rem;left:.5rem;font-family:'Special Elite',cursive;
   font-size:.44rem;letter-spacing:.12em;text-transform:uppercase;
   color:rgba(238,228,200,.28);background:rgba(10,6,1,.55);padding:.12rem .38rem;}
+
+.card-scroll{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-width:none;
+  min-height:0;
+}
+.card-scroll::-webkit-scrollbar{display:none;}
 
 .card-band{background:rgba(12,7,2,1);padding:.5rem 1.1rem;flex-shrink:0;
   display:flex;justify-content:space-between;align-items:center;
@@ -482,7 +506,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 .card-tear{height:9px;flex-shrink:0;background:var(--parch);
   clip-path:polygon(0 100%,1% 18%,2% 82%,3% 25%,4% 68%,5% 10%,6% 78%,7% 32%,8% 88%,9% 22%,10% 62%,11% 38%,12% 74%,13% 16%,14% 80%,15% 34%,16% 58%,17% 22%,18% 84%,19% 12%,20% 68%,21% 42%,22% 78%,23% 20%,24% 62%,25% 30%,26% 88%,27% 16%,28% 72%,29% 38%,30% 64%,31% 24%,32% 80%,33% 18%,34% 66%,35% 36%,36% 82%,37% 28%,38% 60%,39% 22%,40% 78%,41% 14%,42% 70%,43% 34%,44% 76%,45% 22%,46% 58%,47% 40%,48% 80%,49% 18%,50% 72%,51% 28%,52% 86%,53% 14%,54% 64%,55% 32%,56% 78%,57% 22%,58% 74%,59% 38%,60% 84%,61% 24%,62% 68%,63% 32%,64% 78%,65% 18%,66% 62%,67% 36%,68% 80%,69% 22%,70% 74%,71% 40%,72% 84%,73% 18%,74% 62%,75% 30%,76% 78%,77% 20%,78% 68%,79% 34%,80% 84%,81% 14%,82% 60%,83% 40%,84% 74%,85% 24%,86% 78%,87% 20%,88% 64%,89% 34%,90% 80%,91% 18%,92% 68%,93% 30%,94% 84%,95% 14%,96% 58%,97% 40%,98% 80%,99% 18%,100% 55%,100% 100%);}
 
-.card-embed{flex-shrink:0;background:rgba(10,8,5,.96);padding:.85rem 1rem;}
+.card-embed{flex-shrink:0;background:rgba(10,8,5,.96);padding:.85rem 1rem;position:sticky;bottom:0;z-index:2;}
 .card-embed-label{font-family:'Special Elite',cursive;font-size:.47rem;letter-spacing:.28em;text-transform:uppercase;color:rgba(238,228,200,.2);margin-bottom:.5rem;}
 /* each embed item: optional label + iframe */
 .card-embed-item{margin-bottom:.6rem;}
@@ -591,10 +615,25 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
   }
   #mono-content::-webkit-scrollbar{display:none;}
   #mono-empty{min-height:0;flex:1;padding:2rem;}
-  #mono-card{min-height:0;}
+  #mono-card{min-height:0;height:100%;}
   #card-close{display:none;}
   #mono-content{padding:3rem 2.5rem 4rem;}
-  #spine-wrap{padding-left:2.5rem;}
+  #spine-wrap{padding-left:2.5rem;position:relative;}
+  /* Subtle dark scrim behind volumes on desktop too */
+  #spine-wrap::before{
+    content:'';
+    position:absolute;
+    inset:-2rem -2rem -2rem -3.5rem;
+    background:radial-gradient(
+      ellipse 90% 85% at 45% 50%,
+      rgba(6,4,2,.28) 0%,
+      rgba(6,4,2,.16) 50%,
+      rgba(6,4,2,0)   100%
+    );
+    z-index:0;
+    pointer-events:none;
+  }
+  #spine-wrap>*{position:relative;z-index:1;}
   #spine{left:calc(2.5rem + 13px);box-shadow:0 0 10px 2px rgba(184,120,10,.2);}
   .vs{padding:1.6rem 1.5rem 0 3.8rem;}
   .vs::before{left:2.5rem;}
@@ -622,8 +661,155 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
   background-repeat:repeat;
   background-size:4px 4px;
   mix-blend-mode:overlay;
-  opacity:.14;
+  opacity:.45;
 }
+
+/* ═══════════════════════════════════
+   CATALOGUE
+═══════════════════════════════════ */
+#v-catalogue{background:var(--tar);}
+#v-catalogue.on{display:flex;flex-direction:column;padding-top:var(--nav-h);}
+
+/* Filter bar */
+#cat-filters{
+  padding:1.2rem 1.5rem .8rem;
+  border-bottom:1px solid rgba(238,228,200,.06);
+  background:rgba(10,8,5,.95);
+  display:flex;flex-direction:column;gap:.8rem;
+  flex-shrink:0;
+  /* Not sticky — it's outside cat-body so it just sits above it naturally */
+  z-index:10;
+}
+#cat-filter-row{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.cat-filter-label{
+  font-family:'Special Elite',cursive;font-size:.72rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ash);white-space:nowrap;
+}
+/* Genre pills */
+#cat-genres{display:flex;flex-wrap:wrap;gap:.35rem;}
+.cat-pill{
+  font-family:'Special Elite',cursive;font-size:.7rem;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(238,228,200,.4);
+  border:1px solid rgba(238,228,200,.12);
+  padding:.22rem .65rem;cursor:pointer;transition:all .18s;
+  background:transparent;-webkit-tap-highlight-color:transparent;
+  white-space:nowrap;
+}
+.cat-pill:hover{color:var(--bone);border-color:rgba(238,228,200,.4);}
+.cat-pill.active{
+  color:var(--tar);background:var(--amber2);
+  border-color:var(--amber2);
+}
+/* Year range */
+#cat-year-row{display:flex;align-items:center;gap:.8rem;}
+#cat-year-range{
+  -webkit-appearance:none;appearance:none;
+  width:140px;height:2px;
+  background:rgba(238,228,200,.15);outline:none;cursor:pointer;
+}
+#cat-year-range::-webkit-slider-thumb{
+  -webkit-appearance:none;width:12px;height:12px;
+  border-radius:50%;background:var(--amber2);cursor:pointer;
+}
+#cat-year-range::-moz-range-thumb{
+  width:12px;height:12px;border-radius:50%;
+  background:var(--amber2);border:none;cursor:pointer;
+}
+#cat-year-val{
+  font-family:'Courier Prime',monospace;font-size:.78rem;
+  color:var(--amber2);min-width:3.5rem;
+}
+/* Sort controls */
+#cat-sort-row{display:flex;align-items:center;gap:.5rem;}
+.cat-sort-btn{
+  font-family:'Special Elite',cursive;font-size:.68rem;letter-spacing:.12em;
+  text-transform:uppercase;color:rgba(238,228,200,.3);
+  background:none;border:1px solid rgba(238,228,200,.1);
+  padding:.2rem .6rem;cursor:pointer;transition:all .18s;
+}
+.cat-sort-btn:hover{color:var(--bone);border-color:rgba(238,228,200,.35);}
+.cat-sort-btn.active{color:var(--amber2);border-color:var(--amber2);}
+/* Result count */
+#cat-count{
+  font-family:'Courier Prime',monospace;font-size:.74rem;
+  color:rgba(238,228,200,.2);margin-left:auto;
+}
+
+/* Main body: list + card — fills remaining height after filter bar */
+#cat-body{
+  flex:1;display:flex;flex-direction:column;
+  overflow:hidden;
+  min-height:0; /* critical: lets flex child shrink below content size */
+}
+
+/* Track list */
+#cat-list-panel{
+  overflow-y:auto;flex:1;scrollbar-width:none;
+  padding:.4rem 0;
+}
+#cat-list-panel::-webkit-scrollbar{display:none;}
+
+.cat-row{
+  display:flex;align-items:baseline;gap:.6rem;
+  padding:.55rem 1.5rem;cursor:pointer;
+  border-bottom:1px solid rgba(238,228,200,.03);
+  transition:background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.cat-row:hover{background:rgba(238,228,200,.04);}
+.cat-row.sel{background:rgba(184,120,10,.08);}
+.cat-row-n{
+  font-family:'Courier Prime',monospace;font-size:.65rem;
+  color:rgba(238,228,200,.45);min-width:2.8rem;flex-shrink:0;
+}
+.cat-row-t{
+  font-family:'IM Fell English',serif;font-size:1rem;
+  color:rgba(238,228,200,.82);flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  text-shadow:0 1px 4px rgba(0,0,0,.8);
+}
+.cat-row.sel .cat-row-t{color:var(--bone);}
+.cat-row-meta{
+  font-family:'Courier Prime',monospace;font-size:.6rem;
+  color:rgba(238,228,200,.45);flex-shrink:0;
+  display:flex;gap:.6rem;
+}
+.cat-row-g{
+  font-family:'Special Elite',cursive;font-size:.5rem;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(238,228,200,.48);
+}
+.cat-empty{
+  font-family:'Special Elite',cursive;font-size:.6rem;letter-spacing:.2em;
+  text-transform:uppercase;color:rgba(238,228,200,.12);
+  padding:2rem 1.5rem;
+}
+
+/* Desktop ≥768px: side-by-side list + card */
+@media(min-width:768px){
+  #v-catalogue.on{height:100vh;overflow:hidden;}
+  #cat-body{flex-direction:row;overflow:hidden;}
+  #cat-list-panel{
+    width:420px;flex:none;
+    border-right:1px solid rgba(238,228,200,.05);
+    overflow-y:auto;
+  }
+  #cat-card-panel{
+    flex:1;overflow-y:auto;
+    background:var(--tar2);
+  }
+}
+
+#cat-card-panel[data-vol="I"]  .card-band{border-left:3px solid var(--air2);}
+#cat-card-panel[data-vol="II"] .card-band{border-left:3px solid var(--fire2);}
+#cat-card-panel[data-vol="III"].card-band{border-left:3px solid var(--water2);}
+#cat-card-panel[data-vol="IV"] .card-band{border-left:3px solid var(--earth2);}
+
+/* Mobile: card slides below list */
+#cat-card-panel{
+  background:var(--tar2);
+  display:none;
+}
+#cat-card-panel.active{display:block;}
 </style>
 </head>
 <body>
@@ -647,6 +833,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
   <div id="nav-logo">ℌ·𝔖·𝔄</div>
   <button class="nb on" onclick="show('mono')">Monochord</button>
   <button class="nb" onclick="show('shuffle')">Shuffle</button>
+  <button class="nb" onclick="show('catalogue')">Catalogue</button>
 </nav>
 
 <!-- MONOCHORD -->
@@ -700,6 +887,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
         <span class="cb-num" id="cb-num">—</span>
         <span class="cb-vol" id="cb-vol">—</span>
       </div>
+      <div class="card-scroll">
       <div class="card-body">
 
         <!-- header: big number + title / artist -->
@@ -757,6 +945,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
       <div class="card-tear"></div>
       <!-- images below the text card, above the embed -->
       <div class="card-img-slot" id="cb-imgs-bottom"></div>
+      </div><!-- end .card-scroll -->
       <div class="card-embed">
         <div class="card-embed-label">Listen</div>
         <div id="cb-embed-wrap"></div>
@@ -791,6 +980,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
           <span class="cb-num" id="sh-num">—</span>
           <span class="cb-vol" id="sh-cvol">—</span>
         </div>
+        <div class="card-scroll">
         <div class="card-body">
           <div class="cb-header-row">
             <div class="cb-big-num" id="sh-big-num">—</div>
@@ -835,6 +1025,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
         <div class="card-tear"></div>
         <!-- images below -->
         <div class="card-img-slot" id="sh-imgs-bottom"></div>
+        </div><!-- end .card-scroll -->
         <div class="card-embed">
           <div class="card-embed-label">Listen</div>
           <div id="sh-embed-wrap"></div>
@@ -844,6 +1035,93 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
   </div>
   <div id="sh-bottom">
     <span id="sh-counter">0 of 84 drawn</span>
+  </div>
+</section>
+
+<!-- CATALOGUE -->
+<section class="view" id="v-catalogue">
+  <!-- Filter bar -->
+  <div id="cat-filters">
+    <div id="cat-filter-row">
+      <span class="cat-filter-label">Genre</span>
+      <div id="cat-genres"><!-- pills injected by JS --></div>
+      <span id="cat-count"></span>
+    </div>
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;">
+      <div id="cat-year-row">
+        <span class="cat-filter-label">From</span>
+        <input type="range" id="cat-year-range" min="1924" max="1933" value="1924" step="1">
+        <span id="cat-year-val">1924+</span>
+      </div>
+      <div id="cat-sort-row">
+        <span class="cat-filter-label">Sort</span>
+        <button class="cat-sort-btn active" data-sort="year">Year</button>
+        <button class="cat-sort-btn" data-sort="alpha">A–Z</button>
+        <button class="cat-sort-btn" data-sort="vol">Volume</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body: list + card -->
+  <div id="cat-body">
+    <div id="cat-list-panel">
+      <!-- rows injected by JS -->
+    </div>
+    <div id="cat-card-panel">
+      <!-- reuses all mono-card inner markup -->
+      <div id="cat-imgs-top" class="card-img-slot"></div>
+      <div class="card-band">
+        <span class="cb-num" id="cat-num">—</span>
+        <span class="cb-vol" id="cat-cvol">—</span>
+      </div>
+      <div class="card-body" id="cat-card-body">
+        <div class="cb-header-row">
+          <div class="cb-big-num" id="cat-big-num">—</div>
+          <div class="cb-title-block">
+            <div class="cb-title"           id="cat-title">—</div>
+            <div class="cb-label-info"      id="cat-label-info" style="display:none"></div>
+            <div class="cb-artist"          id="cat-artist">—</div>
+            <div class="cb-instrumentation" id="cat-inst" style="display:none"></div>
+          </div>
+        </div>
+        <div class="cb-meta-strip">
+          <div class="cb-meta-cell">
+            <span class="cb-meta-key">Rec. date</span>
+            <span class="cb-meta-val" id="cat-year-disp">—</span>
+          </div>
+          <div class="cb-meta-cell" id="cat-issue-cell" style="display:none">
+            <span class="cb-meta-key">Issue no.</span>
+            <span class="cb-meta-val" id="cat-issue">—</span>
+          </div>
+          <div class="cb-meta-cell">
+            <span class="cb-meta-key">Genre</span>
+            <span class="cb-meta-val" id="cat-genre">—</span>
+          </div>
+        </div>
+        <div class="cb-section">
+          <div class="cb-section-label">Synopsis</div>
+          <div class="cb-hl" id="cat-hl">—</div>
+        </div>
+        <div class="cb-section" id="cat-notes-sec" style="display:none">
+          <div class="cb-section-label">Notes</div>
+          <div class="cb-notes" id="cat-notes"></div>
+        </div>
+        <div class="cb-section" id="cat-disco-sec" style="display:none">
+          <div class="cb-section-label">Discography</div>
+          <ul class="cb-list" id="cat-disco"></ul>
+        </div>
+        <div class="cb-section" id="cat-biblio-sec" style="display:none">
+          <div class="cb-section-label">Bibliography</div>
+          <ul class="cb-list" id="cat-biblio"></ul>
+        </div>
+      </div>
+      <div class="card-tear"></div>
+      <div id="cat-imgs-bottom" class="card-img-slot"></div>
+      <div class="card-embed">
+        <div class="card-embed-label">Listen</div>
+        <div id="cat-embed-wrap"></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -907,7 +1185,7 @@ function showDataWarning(){
 function show(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.getElementById('v-'+id).classList.add('on');
-  document.querySelectorAll('.nb').forEach((b,i)=>b.classList.toggle('on',['mono','shuffle'][i]===id));
+  document.querySelectorAll('.nb').forEach((b,i)=>b.classList.toggle('on',['mono','shuffle','catalogue'][i]===id));
   if(id==='shuffle'&&!shReady){shReady=true;requestAnimationFrame(()=>requestAnimationFrame(initShGL));}
 }
 
@@ -1157,7 +1435,7 @@ function buildMono(){
       row.className='tn';
       row.innerHTML=`<span class="tn-n">${t.o}</span><span class="tn-t">${t.t}</span><span class="tn-dot"></span>`;
       row.addEventListener('click',()=>showCard(t,row));
-      row.addEventListener('mouseenter',()=>showCard(t,row));
+      /* desktop: click-only — no accidental card change on hover */
       c.appendChild(row);
     });
   });
@@ -1350,6 +1628,7 @@ Promise.all([
   document.fonts.ready
 ]).then(()=>{
   buildMono();
+  initCatalogue();
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     initBgGL();
     initRightNoise();
@@ -1433,6 +1712,212 @@ function drawCard(e){
   },160);
 }
 
+/* ── CATALOGUE ── */
+(function(){
+
+  let catActiveGenre = null;   // null = all
+  let catMinYear     = 1924;
+  let catSort        = 'year';
+  let catSelIdx      = null;
+
+  /* Build genre pills from actual data */
+  function buildGenrePills(){
+    const genres = [...new Set(T.map(t=>t.g).filter(Boolean))].sort();
+    const wrap = document.getElementById('cat-genres');
+    wrap.innerHTML = '';
+    // "All" pill
+    const all = document.createElement('button');
+    all.className = 'cat-pill active';
+    all.textContent = 'All';
+    all.dataset.genre = '';
+    all.onclick = () => setGenre(null, all);
+    wrap.appendChild(all);
+    genres.forEach(g => {
+      const p = document.createElement('button');
+      p.className = 'cat-pill';
+      p.textContent = g;
+      p.dataset.genre = g;
+      p.onclick = () => setGenre(g, p);
+      wrap.appendChild(p);
+    });
+  }
+
+  function setGenre(g, el){
+    catActiveGenre = g;
+    document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    renderList();
+  }
+
+  /* Year range slider */
+  function initYearSlider(){
+    const years = T.map(t=>parseInt(t.y)).filter(Boolean);
+    const minY  = Math.min(...years);
+    const maxY  = Math.max(...years);
+    const sl    = document.getElementById('cat-year-range');
+    sl.min   = minY;
+    sl.max   = maxY;
+    sl.value = minY;
+    catMinYear = minY;
+    document.getElementById('cat-year-val').textContent = minY + '+';
+    sl.oninput = () => {
+      catMinYear = parseInt(sl.value);
+      document.getElementById('cat-year-val').textContent = catMinYear + '+';
+      renderList();
+    };
+  }
+
+  /* Sort buttons */
+  function initSortBtns(){
+    document.querySelectorAll('.cat-sort-btn').forEach(b=>{
+      b.onclick = () => {
+        catSort = b.dataset.sort;
+        document.querySelectorAll('.cat-sort-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        renderList();
+      };
+    });
+  }
+
+  /* Filter + sort tracks */
+  function filteredTracks(){
+    let tracks = T.filter(t => {
+      const yearMatch = !t.y || parseInt(t.y) >= catMinYear;
+      const genreMatch = !catActiveGenre || t.g === catActiveGenre;
+      return yearMatch && genreMatch;
+    });
+    if(catSort === 'year'){
+      tracks.sort((a,b) => (parseInt(a.y)||0) - (parseInt(b.y)||0));
+    } else if(catSort === 'alpha'){
+      tracks.sort((a,b) => (a.t||'').localeCompare(b.t||''));
+    } else {
+      // vol order: I→II→III→IV then by o
+      const vo = {I:0,II:1,III:2,IV:3};
+      tracks.sort((a,b) => (vo[a.v]||0) - (vo[b.v]||0) || (a.o||0) - (b.o||0));
+    }
+    return tracks;
+  }
+
+  /* Render list rows */
+  function renderList(){
+    const tracks = filteredTracks();
+    const list   = document.getElementById('cat-list-panel');
+    list.innerHTML = '';
+
+    document.getElementById('cat-count').textContent =
+      tracks.length + ' of ' + T.length;
+
+    if(!tracks.length){
+      const em = document.createElement('div');
+      em.className = 'cat-empty';
+      em.textContent = 'No recordings match';
+      list.appendChild(em);
+      return;
+    }
+
+    tracks.forEach((t, i) => {
+      const row  = document.createElement('div');
+      row.className = 'cat-row' + (catSelIdx !== null && T.indexOf(t) === catSelIdx ? ' sel' : '');
+      row.innerHTML = `
+        <span class="cat-row-n">${t.n||''}</span>
+        <span class="cat-row-t">${t.t||''}</span>
+        <span class="cat-row-meta">
+          <span class="cat-row-g">${t.g||''}</span>
+          <span>${t.y||''}</span>
+        </span>`;
+      row.onclick = () => openCatCard(t, T.indexOf(t), row);
+      list.appendChild(row);
+    });
+  }
+
+  /* Open card in catalogue */
+  function openCatCard(t, idx, rowEl){
+    catSelIdx = idx;
+    // highlight row
+    document.querySelectorAll('.cat-row').forEach(r=>r.classList.remove('sel'));
+    rowEl.classList.add('sel');
+
+    const panel = document.getElementById('cat-card-panel');
+    panel.classList.add('active');
+
+    // text fields
+    document.getElementById('cat-num').textContent        = t.n||'';
+    document.getElementById('cat-cvol').textContent       = VN[t.v]||'';
+    document.getElementById('cat-big-num').textContent    = t.o||'';
+    document.getElementById('cat-title').textContent      = t.t||'';
+    document.getElementById('cat-artist').textContent     = t.a||'';
+    document.getElementById('cat-year-disp').textContent  = t.y||'—';
+    document.getElementById('cat-genre').textContent      = t.g||'—';
+    document.getElementById('cat-hl').textContent         = t.h||'—';
+
+    function setOpt(id,val){
+      const el=document.getElementById(id);
+      if(val){el.textContent=val;el.style.display='';}
+      else{el.style.display='none';}
+    }
+    setOpt('cat-label-info', t.labelInfo);
+    setOpt('cat-inst',       t.instrumentation);
+
+    const issueCel = document.getElementById('cat-issue-cell');
+    if(t.issueNumber){document.getElementById('cat-issue').textContent=t.issueNumber;issueCel.style.display='';}
+    else{issueCel.style.display='none';}
+
+    function setSection(secId, listId, items){
+      const sec=document.getElementById(secId), ul=document.getElementById(listId);
+      ul.innerHTML='';
+      if(items&&items.length){
+        items.forEach(e=>{const li=document.createElement('li');li.textContent=e;ul.appendChild(li);});
+        sec.style.display='';
+      } else { sec.style.display='none'; }
+    }
+    setSection('cat-notes-sec',  null,         null); // notes is a div not list
+    if(t.notes){document.getElementById('cat-notes').textContent=t.notes;document.getElementById('cat-notes-sec').style.display='';}
+    else{document.getElementById('cat-notes-sec').style.display='none';}
+    setSection('cat-disco-sec',  'cat-disco',  t.discography);
+    setSection('cat-biblio-sec', 'cat-biblio', t.bibliography);
+
+    // images
+    renderImgSlot(document.getElementById('cat-imgs-top'),    t.imgsTop,    t.t);
+    renderImgSlot(document.getElementById('cat-imgs-bottom'), t.imgsBottom, t.t);
+
+    // embeds
+    const ew = document.getElementById('cat-embed-wrap');
+    ew.innerHTML = '';
+    const links = (t.spotifyLinks||[]).filter(l=>l&&l.id);
+    if(links.length){
+      links.forEach(link=>{
+        const item=document.createElement('div');item.className='card-embed-item';
+        if(link.label&&links.length>1){const lbl=document.createElement('div');lbl.className='card-embed-item-label';lbl.textContent=link.label;item.appendChild(lbl);}
+        const ifr=document.createElement('iframe');
+        ifr.src=`https://open.spotify.com/embed/track/${link.id}?utm_source=generator&theme=0`;
+        ifr.height='80';ifr.allow='autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';ifr.loading='lazy';
+        item.appendChild(ifr);ew.appendChild(item);
+      });
+    } else {
+      const msg=document.createElement('div');msg.className='card-no-embed';
+      msg.textContent='No recording linked.';ew.appendChild(msg);
+    }
+
+    // vol accent colour on band
+    document.getElementById('cat-card-panel').dataset.vol = t.v;
+
+    // mobile: scroll card into view
+    if(window.innerWidth < 768){
+      panel.scrollIntoView({behavior:'smooth',block:'start'});
+    } else {
+      panel.scrollTop = 0;
+    }
+  }
+
+  /* Init catalogue — called once T is loaded */
+  window.initCatalogue = function(){
+    buildGenrePills();
+    initYearSlider();
+    initSortBtns();
+    renderList();
+  };
+
+})();
 /* grain movement handled entirely by CSS steps() animation */
 </script>
 </body>
