@@ -332,7 +332,13 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
   /* mobile: hidden until track selected */
   display:none;
 }
-#card-panel.active{display:block;}
+#card-panel.active{
+  display:flex;
+  flex-direction:column;
+}
+/* mono-card fills the panel as a flex column on mobile too */
+#mono-card{display:none;flex-direction:column;z-index:1;position:relative;animation:c-in .3s ease forwards;overflow:hidden;flex:1;min-height:0;height:calc(100vh - var(--nav-h));}
+#mono-card.show{display:flex;}
 
 #right-noise-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.28;}
 
@@ -343,9 +349,6 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 }
 .me-g{font-family:'UnifrakturMaguntia',cursive;font-size:7rem;color:rgba(184,120,10,.18);line-height:1;margin-bottom:.8rem;}
 .me-h{font-family:'Special Elite',cursive;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(238,228,200,.55);}
-
-#mono-card{display:none;flex-direction:column;z-index:1;position:relative;animation:c-in .3s ease forwards;overflow:hidden;}
-#mono-card.show{display:flex;}
 @keyframes c-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
 /* ── image slots (top and bottom) ── */
@@ -506,8 +509,8 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 .card-tear{height:9px;flex-shrink:0;background:var(--parch);
   clip-path:polygon(0 100%,1% 18%,2% 82%,3% 25%,4% 68%,5% 10%,6% 78%,7% 32%,8% 88%,9% 22%,10% 62%,11% 38%,12% 74%,13% 16%,14% 80%,15% 34%,16% 58%,17% 22%,18% 84%,19% 12%,20% 68%,21% 42%,22% 78%,23% 20%,24% 62%,25% 30%,26% 88%,27% 16%,28% 72%,29% 38%,30% 64%,31% 24%,32% 80%,33% 18%,34% 66%,35% 36%,36% 82%,37% 28%,38% 60%,39% 22%,40% 78%,41% 14%,42% 70%,43% 34%,44% 76%,45% 22%,46% 58%,47% 40%,48% 80%,49% 18%,50% 72%,51% 28%,52% 86%,53% 14%,54% 64%,55% 32%,56% 78%,57% 22%,58% 74%,59% 38%,60% 84%,61% 24%,62% 68%,63% 32%,64% 78%,65% 18%,66% 62%,67% 36%,68% 80%,69% 22%,70% 74%,71% 40%,72% 84%,73% 18%,74% 62%,75% 30%,76% 78%,77% 20%,78% 68%,79% 34%,80% 84%,81% 14%,82% 60%,83% 40%,84% 74%,85% 24%,86% 78%,87% 20%,88% 64%,89% 34%,90% 80%,91% 18%,92% 68%,93% 30%,94% 84%,95% 14%,96% 58%,97% 40%,98% 80%,99% 18%,100% 55%,100% 100%);}
 
-.card-embed{flex-shrink:0;background:rgba(10,8,5,.96);padding:.85rem 1rem;position:sticky;bottom:0;z-index:2;}
-.card-embed-label{font-family:'Special Elite',cursive;font-size:.47rem;letter-spacing:.28em;text-transform:uppercase;color:rgba(238,228,200,.2);margin-bottom:.5rem;}
+.card-embed{flex-shrink:0;background:rgba(10,8,5,.96);padding:.85rem 1rem;}
+.card-embed-label{font-family:'Special Elite',cursive;font-size:.47rem;letter-spacing:.28em;text-transform:uppercase;color:rgba(238,228,200,.55);margin-bottom:.5rem;}
 /* each embed item: optional label + iframe */
 .card-embed-item{margin-bottom:.6rem;}
 .card-embed-item:last-child{margin-bottom:0;}
@@ -515,11 +518,34 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 .card-embed iframe{width:100%;border:none;border-radius:4px;display:block;}
 .card-no-embed{font-family:'IM Fell English',serif;font-style:italic;font-size:.72rem;color:rgba(238,228,200,.18);padding:.3rem 0;}
 
-#card-close{display:flex;align-items:center;justify-content:center;width:100%;padding:.65rem;
-  background:none;border:none;border-top:1px solid rgba(238,228,200,.06);
-  font-family:'Special Elite',cursive;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;
-  color:rgba(238,228,200,.25);cursor:pointer;-webkit-tap-highlight-color:transparent;}
-#card-close:hover{color:var(--bone);}
+#card-close-wrap{
+  display:none; /* mobile only */
+  justify-content:center;
+  padding:1.2rem 1rem 1.4rem;
+  background:var(--parch);
+}
+#card-close{
+  display:inline-flex;
+  align-items:center;gap:.4rem;
+  padding:.55rem 1.6rem;
+  background:rgba(20,14,4,.88);
+  border:1px solid rgba(184,120,10,.55);
+  border-radius:999px;
+  font-family:'Special Elite',cursive;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber2);cursor:pointer;-webkit-tap-highlight-color:transparent;
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
+  transition:background .18s, color .18s, border-color .18s;
+}
+#card-close:hover,#card-close:active{
+  background:rgba(184,120,10,.2);
+  color:var(--bone);
+  border-color:var(--amber2);
+}
+@media(max-width:767px){
+  #card-close-wrap{display:flex;}
+  /* Spotify embed floats to top of card on mobile */
+  .card-embed{order:-1;}
+}
 
 /* ═══════════════════════════════════
    SHUFFLE
@@ -559,7 +585,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
   text-transform:uppercase;color:rgba(238,228,200,.1);
   padding:2rem;
 }
-#sh-card{animation:rev .4s ease forwards;}
+#sh-card{animation:rev .4s ease forwards;display:none;flex-direction:column;min-height:100%;}
 @keyframes rev{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 #sh-bottom{border-top:1px solid rgba(238,228,200,.05);padding:1.2rem 1.5rem;display:flex;align-items:center;gap:1.5rem;}
 .sh-btn{font-family:'Special Elite',cursive;font-size:.76rem;letter-spacing:.16em;text-transform:uppercase;padding:.6rem 1.5rem;border:1px solid rgba(184,120,10,.4);background:transparent;color:var(--amber2);cursor:pointer;transition:all .22s;-webkit-tap-highlight-color:transparent;}
@@ -583,11 +609,12 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
      alongside #card-panel for clarity */
   #mono-div{display:block;background:rgba(238,228,200,.05);grid-column:2;grid-row:1;align-self:stretch;}
   #card-panel{
-    display:block !important;
+    display:flex !important;
+    flex-direction:column;
     grid-column:3;grid-row:1;
     position:sticky;top:var(--nav-h);
     height:calc(100vh - var(--nav-h));
-    overflow-y:auto;
+    overflow:hidden; /* card-scroll handles internal scrolling */
   }
   /* Keep left panel from growing taller than viewport and
      creating scrollable space. It scrolls internally if needed. */
@@ -945,13 +972,16 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
       <div class="card-tear"></div>
       <!-- images below the text card, above the embed -->
       <div class="card-img-slot" id="cb-imgs-bottom"></div>
+      <!-- back to tracks pill — sits at bottom of scrollable content, mobile only -->
+      <div id="card-close-wrap">
+        <button id="card-close" onclick="scrollToTracks()">↑ Back to tracks</button>
+      </div>
       </div><!-- end .card-scroll -->
       <div class="card-embed">
         <div class="card-embed-label">Listen</div>
         <div id="cb-embed-wrap"></div>
       </div>
     </div>
-    <button id="card-close" onclick="closeCard()">← back to tracks</button>
   </div>
 </section>
 
@@ -959,7 +989,7 @@ body{background:var(--tar);color:var(--bone);font-family:'Courier Prime',monospa
 <section class="view" id="v-shuffle">
   <div id="sh-top">
     <h2>Draw from<br>the Archive</h2>
-    <p class="sh-lede">Smith never revealed the race of performers, preventing listeners from assessing the music in racial terms. Each draw surfaces one of 84 songs as he intended — blind, strange, complete.</p>
+    <p class="sh-lede">Smith never revealed the race of performers, preventing listeners from assessing the music in racial terms. Each draw surfaces one of 84 songs at random.</p>
   </div>
   <div id="sh-stage">
     <div id="sh-draw-zone" onclick="drawCard(event)">
@@ -1619,6 +1649,14 @@ function closeCard(){
   document.querySelectorAll('.tn.sel').forEach(n=>n.classList.remove('sel'));
 }
 
+/* Mobile: scroll back to the track list and close the card */
+function scrollToTracks(){
+  closeCard();
+  const content = document.getElementById('mono-content');
+  if(content) content.scrollIntoView({behavior:'smooth', block:'start'});
+  else window.scrollTo({top:0, behavior:'smooth'});
+}
+
 /* ── BOOTSTRAP ──
    Wait for track data (fetch) AND fonts/layout before
    building the UI. Both must resolve; order doesn't matter,
@@ -1705,7 +1743,7 @@ function drawCard(e){
 
     // ── vol accent colour on band ──
     card.dataset.vol=t.v;
-    card.style.display='block';
+    card.style.display='flex';
     document.getElementById('sh-card-zone').scrollTop=0;
     gsap.fromTo(card,{opacity:0,y:6},{opacity:1,y:0,duration:.35,ease:'power2.out'});
     document.getElementById('sh-counter').textContent=drawN+' of 84 drawn';
